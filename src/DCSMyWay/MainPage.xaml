@@ -74,10 +74,26 @@
         IsEnabled="False" />
     </Grid>
 
-    <TextBlock
-      Grid.Row="1"
-      Style="{StaticResource BodyStrongTextBlockStyle}"
-      Text="Waypoints" />
+    <Grid Grid.Row="1">
+      <TextBlock
+        VerticalAlignment="Center"
+        Style="{StaticResource BodyStrongTextBlockStyle}"
+        Text="Waypoints" />
+      <Button
+        x:Name="MapButton"
+        Padding="8,3"
+        HorizontalAlignment="Right"
+        AutomationProperties.AutomationId="MapButton"
+        AutomationProperties.Name="Map"
+        Click="MapButton_Click"
+        Style="{StaticResource SubtleButtonStyle}"
+        ToolTipService.ToolTip="Show the route on a map">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <FontIcon FontSize="14" Glyph="&#xE909;" />
+          <TextBlock Text="Map" />
+        </StackPanel>
+      </Button>
+    </Grid>
 
     <ListView
       x:Name="WaypointList"

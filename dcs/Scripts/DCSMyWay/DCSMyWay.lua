@@ -10,7 +10,7 @@ local DialogLoader = require('DialogLoader')
 local SkinUtils = require('SkinUtils')
 local Terrain = require('terrain')
 
-local VERSION = '0.7.0'
+local VERSION = '0.7.2'
 local HOST = '127.0.0.1'
 local APP_PORT = 42080
 local COMMAND_PORT = 42081

@@ -25,6 +25,7 @@ public sealed partial class MainPage : Page
   private int _nextTransferId = 1;
   private int _nextWaypointNumber = 1;
   private bool _wasConnected;
+  private MapWindow? _mapWindow;
 
   public MainPage()
   {
@@ -85,6 +86,7 @@ public sealed partial class MainPage : Page
     ClearButton.IsEnabled = _items.Count > 0;
     if (state is not null) _transferHistory.UpdateProgress(state.TransferId, state.PressesDone);
     RefreshTransferMarks(state?.AircraftId);
+    UpdateMap(state);
   }
 
   private void ShowTransferButton(bool cancelling)
@@ -125,6 +127,21 @@ public sealed partial class MainPage : Page
   private void RefreshTransferMarks(long? aircraftId)
   {
     foreach (var item in _items) item.IsTransferred = _transferHistory.IsEntered(aircraftId, item.Waypoint);
+  }
+
+  private void UpdateMap(DcsState? state) =>
+    _mapWindow?.Update(MapState.Create(Waypoints, waypoint => _transferHistory.SteerpointOf(state?.AircraftId, waypoint), state?.Position));
+
+  private void MapButton_Click(object sender, RoutedEventArgs e)
+  {
+    if (_mapWindow is null)
+    {
+      _mapWindow = new MapWindow();
+      _mapWindow.Closed += (_, _) => _mapWindow = null;
+    }
+
+    UpdateMap(App.DcsListener.IsConnected ? App.DcsListener.Latest : null);
+    _mapWindow.Activate();
   }
 
   private void OnMarkReceived(object? sender, DcsPosition position) =>
