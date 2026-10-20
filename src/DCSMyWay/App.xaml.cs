@@ -4,8 +4,6 @@ namespace DCSMyWay;
 
 public partial class App : Application
 {
-  private Window? _window;
-
   public App()
   {
     InitializeComponent();
@@ -14,9 +12,11 @@ public partial class App : Application
       $"{e.Message}\n{e.Exception}");
   }
 
+  public static MainWindow MainWindow { get; private set; } = null!;
+
   protected override void OnLaunched(LaunchActivatedEventArgs args)
   {
-    _window = new MainWindow();
-    _window.Activate();
+    MainWindow = new MainWindow();
+    MainWindow.Activate();
   }
 }
