@@ -1,0 +1,1716 @@
+{
+  "raw": [
+    {
+      "id": 1,
+      "name": "W1",
+      "lat": 43.999756838301,
+      "long": 40.143417541493,
+      "elev": 735.44140625
+    },
+    {
+      "id": 2,
+      "name": "W2",
+      "lat": 44.0000001,
+      "long": 40.0000001,
+      "elev": 0
+    },
+    {
+      "id": 3,
+      "name": "W3",
+      "lat": -59.09332,
+      "long": 46.91491,
+      "elev": 12.5
+    },
+    {
+      "id": 4,
+      "name": "W4",
+      "lat": 55.78044,
+      "long": 117.05243,
+      "elev": 3048
+    },
+    {
+      "id": 5,
+      "name": "W5",
+      "lat": 36.2364,
+      "long": -115.0342,
+      "elev": 573.6
+    },
+    {
+      "id": 6,
+      "name": "W6",
+      "lat": 44,
+      "long": -40,
+      "elev": 1000
+    },
+    {
+      "id": 7,
+      "name": "W7",
+      "lat": 43.9999999,
+      "long": -40.99999999,
+      "elev": 8.2296
+    }
+  ],
+  "formatted": [
+    {
+      "name": "W1",
+      "id": 1,
+      "lat": "43.59.985",
+      "long": "040.08.605",
+      "elev": "2412",
+      "latHem": "N",
+      "longHem": "E"
+    },
+    {
+      "name": "W2",
+      "id": 2,
+      "lat": "44.00.000",
+      "long": "040.00.000",
+      "elev": "0",
+      "latHem": "N",
+      "longHem": "E"
+    },
+    {
+      "name": "W3",
+      "id": 3,
+      "lat": "59.05.599",
+      "long": "046.54.895",
+      "elev": "41",
+      "latHem": "S",
+      "longHem": "E"
+    },
+    {
+      "name": "W4",
+      "id": 4,
+      "lat": "55.46.826",
+      "long": "117.03.146",
+      "elev": "10000",
+      "latHem": "N",
+      "longHem": "E"
+    },
+    {
+      "name": "W5",
+      "id": 5,
+      "lat": "36.14.184",
+      "long": "115.02.052",
+      "elev": "1881",
+      "latHem": "N",
+      "longHem": "W"
+    },
+    {
+      "name": "W6",
+      "id": 6,
+      "lat": "44.00.000",
+      "long": "040.00.000",
+      "elev": "3280",
+      "latHem": "N",
+      "longHem": "W"
+    },
+    {
+      "name": "W7",
+      "id": 7,
+      "lat": "44.00.000",
+      "long": "041.00.000",
+      "elev": "27",
+      "latHem": "N",
+      "longHem": "W"
+    }
+  ],
+  "buttons": [
+    {
+      "device": 17,
+      "code": 3032,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3006,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3030,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3004,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3006,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3005,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3007,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3011,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3011,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3010,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3007,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3016,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3008,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3006,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3010,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3008,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3007,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3016,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3004,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3006,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3003,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3004,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3016,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3030,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3004,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3006,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3006,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3016,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3008,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3006,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3016,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3016,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3030,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3010,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3007,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3011,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3007,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3007,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3011,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3011,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3016,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3008,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3006,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3008,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3007,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3006,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3010,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3011,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3007,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3016,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3006,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3003,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3016,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3030,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3004,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3007,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3007,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3006,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3008,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3010,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3004,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3008,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3016,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3008,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3003,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3003,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3009,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3005,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3003,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3006,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3008,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3016,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3003,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3016,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3030,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3004,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3005,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3008,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3003,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3006,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3003,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3010,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3006,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3016,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3006,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3003,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3003,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3007,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3004,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3007,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3004,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3016,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3003,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3010,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3010,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3003,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3016,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3030,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3004,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3006,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3006,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3016,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3006,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3006,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3016,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3005,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3004,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3010,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3016,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3030,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3004,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3006,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3006,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3016,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3006,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3006,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3003,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3002,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3016,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3035,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3004,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3009,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3016,
+      "delay": 10,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3034,
+      "delay": 150,
+      "activate": 1,
+      "addDepress": "true"
+    },
+    {
+      "device": 17,
+      "code": 3032,
+      "delay": 150,
+      "activate": -1,
+      "addDepress": "true"
+    }
+  ]
+}

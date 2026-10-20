@@ -2,4 +2,9 @@
   <Folder Name="/src/">
     <Project Path="src/DCSMyWay/DCSMyWay.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DCSMyWay.Tests/DCSMyWay.Tests.csproj">
+      <Platform Project="x64" />
+    </Project>
+  </Folder>
 </Solution>
