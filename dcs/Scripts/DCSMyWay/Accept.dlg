@@ -1,0 +1,57 @@
+dialog = {
+  ["type"] = "Window",
+  ["params"] = {
+    ["bounds"] = {
+      [1] = {
+        ["x"] = 0,
+        ["y"] = 0,
+        ["w"] = 52,
+        ["h"] = 52,
+      },
+    },
+    ["draggable"] = false,
+    ["enabled"] = true,
+    ["hasCursor"] = true,
+    ["lockFlow"] = false,
+    ["modal"] = false,
+    ["offscreen"] = false,
+    ["resizable"] = false,
+    ["zOrder"] = 112,
+    ["text"] = "",
+  },
+  ["skin"] = {
+    ["params"] = {
+      ["headerHeight"] = 0,
+      ["name"] = "windowSkin",
+    },
+    ["states"] = {
+      ["released"] = {
+        [1] = {
+          ["bkg"] = {
+            ["center_center"] = "0x00000000",
+          },
+        },
+      },
+    },
+  },
+  ["children"] = {
+    ["Accept"] = {
+      ["type"] = "Static",
+      ["params"] = {
+        ["bounds"] = {
+          ["x"] = 0,
+          ["y"] = 0,
+          ["w"] = 52,
+          ["h"] = 52,
+        },
+        ["enabled"] = true,
+        ["visible"] = true,
+      },
+      ["skin"] = {
+        ["params"] = {
+          ["name"] = "staticSkin",
+        },
+      },
+    },
+  },
+}

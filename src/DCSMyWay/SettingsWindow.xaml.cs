@@ -9,7 +9,7 @@ namespace DCSMyWay;
 public sealed partial class SettingsWindow : Window
 {
   private const int WindowWidth = 320;
-  private const int WindowHeight = 230;
+  private const int WindowHeight = 310;
 
   public SettingsWindow(Window owner)
   {
@@ -33,10 +33,13 @@ public sealed partial class SettingsWindow : Window
     var settings = App.Settings.Current;
     AlwaysOnTopSwitch.IsOn = settings.AlwaysOnTop;
     DontTakeFocusSwitch.IsOn = settings.DontTakeFocus;
+    StartAtActiveSteerpointSwitch.IsOn = settings.StartAtActiveSteerpoint;
     AlwaysOnTopSwitch.Toggled += async (_, _) =>
       await App.Settings.UpdateAsync(s => s with { AlwaysOnTop = AlwaysOnTopSwitch.IsOn });
     DontTakeFocusSwitch.Toggled += async (_, _) =>
       await App.Settings.UpdateAsync(s => s with { DontTakeFocus = DontTakeFocusSwitch.IsOn });
+    StartAtActiveSteerpointSwitch.Toggled += async (_, _) =>
+      await App.Settings.UpdateAsync(s => s with { StartAtActiveSteerpoint = StartAtActiveSteerpointSwitch.IsOn });
 
     App.Settings.Changed += OnSettingsChanged;
     Closed += (_, _) => App.Settings.Changed -= OnSettingsChanged;
