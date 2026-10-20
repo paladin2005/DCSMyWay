@@ -6,7 +6,7 @@ package.cpath = package.cpath .. ';' .. lfs.currentdir() .. '/LuaSocket/?.dll'
 local socket = require('socket')
 local JSON = loadfile(lfs.currentdir() .. '/Scripts/JSON.lua')()
 
-local VERSION = '0.8.0'
+local VERSION = '0.9.1'
 local HOST = '127.0.0.1'
 local APP_PORT = 42080
 local COMMAND_PORT = 42082
@@ -18,6 +18,7 @@ local CHECK_INTERVAL = 0.05
 local STEERPOINT_SOURCES = {
   { model = '^F%-16', indicators = { 6 }, elements = { 'Selected Steerpoint', 'STEERPOINT NUMBER', 'INS_SelectedSteerpoint' }, display = 'DED' },
   { model = '^FA%-18', indicators = { 4, 2, 3 }, elements = { 'WYPT_Page_Number' } },
+  { model = '^A%-10C', indicators = { 3 }, elements = { 'CurrSteerPointNumber' } },
 }
 
 local udp
@@ -37,6 +38,7 @@ local deadline = 0
 local nextCheckAt = 0
 local stepPresses = 0
 local selectedNumber
+local otherwisePressed = false
 local transferId
 local doneSteps = 0
 local failure
@@ -268,8 +270,14 @@ local function readNumber(selection)
   return nil
 end
 
+local function optionChecks(step)
+  local checks = {}
+  for _, option in ipairs(step.options) do table.insert(checks, option.when) end
+  return checks
+end
+
 local function describeChecks(step)
-  local checks = step['until'] or step.wait or { step.select }
+  local checks = step['until'] or step.wait or (step.options and optionChecks(step)) or { step.select }
   local parts = {}
   for _, check in ipairs(checks) do
     local found = false
@@ -313,6 +321,54 @@ local function selectNumber(step, now)
   pressButton(number < step.select.target and step or step.select.down, now)
 end
 
+local function firstOption(step)
+  local displays = {}
+  for _, option in ipairs(step.options) do
+    if checkHolds(option.when, displays) then return option end
+  end
+  return nil
+end
+
+local function chooseOption(option, now)
+  if not option.device then return finishStep() end
+  otherwisePressed = false
+  pressButton(option, now)
+end
+
+local function pressOtherwise(step, now)
+  otherwisePressed = true
+  pressButton(step.otherwise, now)
+end
+
+local function searchOptions(step, now)
+  phase = 'searching'
+  deadline = now + (step.timeout or 0) / 1000
+  nextCheckAt = now
+end
+
+local function stepOptions(step, now)
+  if phase == nil then
+    stepPresses = 0
+    local option = firstOption(step)
+    if option then return chooseOption(option, now) end
+    if step.otherwise and (step.tries or 1) > 0 then return pressOtherwise(step, now) end
+    return searchOptions(step, now)
+  end
+  if phase == 'holding' then
+    if now < releaseAt then return end
+    release()
+    if not otherwisePressed then return finishStep() end
+    return searchOptions(step, now)
+  end
+  if now < nextCheckAt then return end
+  nextCheckAt = now + CHECK_INTERVAL
+  local option = firstOption(step)
+  if option then return chooseOption(option, now) end
+  if now < deadline then return end
+  if step.otherwise and stepPresses < (step.tries or 1) then return pressOtherwise(step, now) end
+  failStep(step)
+end
+
 local function startStep(step, now)
   stepPresses = 0
   if step.select then return selectNumber(step, now) end
@@ -332,6 +388,7 @@ local function stepTransfer(now)
     stopSteps()
     return
   end
+  if step.options then return stepOptions(step, now) end
   if phase == nil then return startStep(step, now) end
   if phase == 'holding' then
     if now < releaseAt then return end

@@ -6,7 +6,16 @@ public sealed class WaypointItem(Waypoint waypoint) : INotifyPropertyChanged
 {
   public event PropertyChangedEventHandler? PropertyChanged;
 
-  public Waypoint Waypoint { get; } = waypoint;
+  public Waypoint Waypoint
+  {
+    get;
+    set
+    {
+      if (field == value) return;
+      field = value;
+      PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Waypoint)));
+    }
+  } = waypoint;
 
   public bool IsTransferred
   {

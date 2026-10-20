@@ -111,6 +111,31 @@ public class DcsProtocolTests
       command);
   }
 
+  [Fact]
+  public void SerializesStepsThatChooseAButtonByWhatTheDisplayShows()
+  {
+    CockpitStep[] steps =
+    [
+      new(null)
+      {
+        Options = [new(new(3, "^ActiveFP1$", Values: ["*"]), new(9, 3005, 100)), new(new(3, "^FPBUILDPageNumber$", "^1/"))],
+        Otherwise = new(9, 3063, 100, -1),
+        Tries = 7,
+        Timeout = 300,
+        Failure = "No plan",
+      },
+    ];
+
+    var command = DcsProtocol.CreateWaypointsCommand(4, steps);
+
+    Assert.Equal(
+      """{"type":"waypoints","id":4,"steps":[{"tries":7,"timeout":300,"failure":"No plan","options":[""" +
+      """{"when":{"indicator":3,"element":"^ActiveFP1$","values":["*"]},"device":9,"code":3005,"delay":100,"activate":1,"depress":true},""" +
+      """{"when":{"indicator":3,"element":"^FPBUILDPageNumber$","pattern":"^1/"}}],"otherwise":""" +
+      """{"device":9,"code":3063,"delay":100,"activate":-1,"depress":true}}]}""",
+      command);
+  }
+
   [Theory]
   [InlineData(true, """{"type":"crosshair","visible":true}""")]
   [InlineData(false, """{"type":"crosshair","visible":false}""")]

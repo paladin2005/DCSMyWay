@@ -37,6 +37,31 @@ public sealed class SettingsServiceTests : IDisposable
   }
 
   [Fact]
+  public async Task PersistsTheThemeByName()
+  {
+    var service = new SettingsService(SettingsPath);
+    await service.UpdateAsync(s => s with { Theme = AppTheme.Dark });
+
+    var restarted = new SettingsService(SettingsPath);
+    await restarted.LoadAsync();
+
+    Assert.Equal(AppTheme.Dark, restarted.Current.Theme);
+    Assert.Contains("\"Theme\": \"Dark\"", await File.ReadAllTextAsync(SettingsPath, TestContext.Current.CancellationToken));
+  }
+
+  [Fact]
+  public async Task FollowsTheSystemThemeWhenOlderSettingsHaveNoTheme()
+  {
+    Directory.CreateDirectory(_directory);
+    await File.WriteAllTextAsync(SettingsPath, """{ "AlwaysOnTop": false }""", TestContext.Current.CancellationToken);
+    var service = new SettingsService(SettingsPath);
+
+    await service.LoadAsync();
+
+    Assert.Equal(new AppSettings(AlwaysOnTop: false), service.Current);
+  }
+
+  [Fact]
   public async Task RaisesChangedWithTheNewSettings()
   {
     var service = new SettingsService(SettingsPath);
