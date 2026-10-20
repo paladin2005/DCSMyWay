@@ -5,28 +5,29 @@ using DCSMyWay.Models;
 
 namespace DCSMyWay.Services;
 
-public sealed class DcsSender(int port)
+public sealed class DcsSender(int hookPort, int cockpitPort)
 {
-  public const int DefaultPort = 42081;
+  public const int DefaultHookPort = 42081;
+  public const int DefaultCockpitPort = 42082;
 
   private static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds(2);
 
   public Task<bool> SendWaypointsAsync(int transferId, IEnumerable<ButtonPress> presses) =>
-    SendAsync(DcsProtocol.CreateWaypointsCommand(transferId, presses));
+    SendAsync(cockpitPort, DcsProtocol.CreateWaypointsCommand(transferId, presses));
 
   public Task<bool> CancelWaypointsAsync() =>
-    SendAsync(DcsProtocol.CreateCancelCommand());
+    SendAsync(cockpitPort, DcsProtocol.CreateCancelCommand());
 
   public Task<bool> SetCrosshairVisibleAsync(bool visible) =>
-    SendAsync(DcsProtocol.CreateCrosshairCommand(visible));
+    SendAsync(hookPort, DcsProtocol.CreateCrosshairCommand(visible));
 
   public Task<bool> ShowStatusAsync(string text) =>
-    SendAsync(DcsProtocol.CreateStatusCommand(text));
+    SendAsync(hookPort, DcsProtocol.CreateStatusCommand(text));
 
   public Task<bool> ShowRouteAsync(IEnumerable<Waypoint> waypoints) =>
-    SendAsync(DcsProtocol.CreateRouteCommand(waypoints));
+    SendAsync(hookPort, DcsProtocol.CreateRouteCommand(waypoints));
 
-  private async Task<bool> SendAsync(string command)
+  private static async Task<bool> SendAsync(int port, string command)
   {
     using var cancellation = new CancellationTokenSource(SendTimeout);
     try

@@ -17,7 +17,7 @@ public partial class App : Application
 
   public static DcsListener DcsListener { get; } = new(DcsListener.DefaultPort);
 
-  public static DcsSender DcsSender { get; } = new(DcsSender.DefaultPort);
+  public static DcsSender DcsSender { get; } = new(DcsSender.DefaultHookPort, DcsSender.DefaultCockpitPort);
 
   public static MainWindow MainWindow { get; private set; } = null!;
 

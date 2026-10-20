@@ -8,18 +8,50 @@ namespace DCSMyWay.Tests.Services;
 
 public class DcsConnectionTests
 {
+  private const string Camera = """{"type":"camera","model":"F-16C_50","lat":41.9,"lon":43.7,"elev":1677.5,"crosshair":true,"aircraftId":16777472}""";
+  private const string Cockpit = """{"type":"cockpit","model":"F-16C_50","steerpoint":3,"busy":true,"transferId":7,"done":42}""";
+
   [Fact]
-  public async Task ListenerKeepsTheLatestStateSentByDcs()
+  public async Task ListenerKeepsTheLatestCameraSentByTheHook()
   {
     using var listener = new DcsListener(0);
     Assert.True(listener.TryStart());
     using var dcs = new UdpClient();
 
-    var message = """{"type":"camera","model":"F-16C_50","lat":41.9,"lon":43.7,"elev":1677.5,"crosshair":true,"busy":false,"aircraftId":16777472}""";
-    await dcs.SendAsync(Encoding.UTF8.GetBytes(message), new IPEndPoint(IPAddress.Loopback, listener.Port), TestContext.Current.CancellationToken);
+    await SendAsync(dcs, listener, Camera);
     await WaitUntilAsync(() => listener.IsConnected);
 
     Assert.Equal(new DcsState(new DcsPosition("F-16C_50", 41.9, 43.7, 1677.5), true, false, 16777472, null, null, 0), listener.Latest);
+    Assert.False(listener.IsCockpitConnected);
+  }
+
+  [Fact]
+  public async Task ListenerAddsTheCockpitStateSentByTheExportScript()
+  {
+    using var listener = new DcsListener(0);
+    Assert.True(listener.TryStart());
+    using var dcs = new UdpClient();
+
+    await SendAsync(dcs, listener, Camera);
+    await SendAsync(dcs, listener, Cockpit);
+    await WaitUntilAsync(() => listener.IsConnected && listener.IsCockpitConnected);
+
+    Assert.Equal(new DcsState(new DcsPosition("F-16C_50", 41.9, 43.7, 1677.5), true, true, 16777472, 3, 7, 42), listener.Latest);
+  }
+
+  [Fact]
+  public async Task CockpitStateAloneIsNotAConnectionToDcs()
+  {
+    using var listener = new DcsListener(0);
+    Assert.True(listener.TryStart());
+    using var dcs = new UdpClient();
+
+    await SendAsync(dcs, listener, Cockpit);
+    await WaitUntilAsync(() => listener.IsCockpitConnected);
+
+    Assert.True(listener.IsCockpitConnected);
+    Assert.False(listener.IsConnected);
+    Assert.Null(listener.Latest);
   }
 
   [Fact]
@@ -30,12 +62,10 @@ public class DcsConnectionTests
     var marks = new List<DcsPosition>();
     listener.MarkReceived += (_, position) => { lock (marks) marks.Add(position); };
     using var dcs = new UdpClient();
-    var endpoint = new IPEndPoint(IPAddress.Loopback, listener.Port);
 
-    var camera = """{"type":"camera","model":"F-16C_50","lat":1,"lon":2,"elev":3,"crosshair":true,"busy":false}""";
-    var mark = """{"type":"mark","model":"F-16C_50","lat":41.9,"lon":43.7,"elev":1677.5,"crosshair":true,"busy":false}""";
-    await dcs.SendAsync(Encoding.UTF8.GetBytes(camera), endpoint, TestContext.Current.CancellationToken);
-    await dcs.SendAsync(Encoding.UTF8.GetBytes(mark), endpoint, TestContext.Current.CancellationToken);
+    await SendAsync(dcs, listener, """{"type":"camera","model":"F-16C_50","lat":1,"lon":2,"elev":3,"crosshair":true}""");
+    await SendAsync(dcs, listener, Cockpit);
+    await SendAsync(dcs, listener, """{"type":"mark","model":"F-16C_50","lat":41.9,"lon":43.7,"elev":1677.5,"crosshair":true}""");
     await WaitUntilAsync(() => { lock (marks) return marks.Count > 0; });
 
     lock (marks) Assert.Equal([new DcsPosition("F-16C_50", 41.9, 43.7, 1677.5)], marks);
@@ -48,6 +78,7 @@ public class DcsConnectionTests
     listener.TryStart();
 
     Assert.False(listener.IsConnected);
+    Assert.False(listener.IsCockpitConnected);
     Assert.Null(listener.Latest);
   }
 
@@ -63,26 +94,28 @@ public class DcsConnectionTests
   }
 
   [Fact]
-  public async Task SenderWritesTheCommandAsASingleLine()
+  public async Task SenderSendsHookCommandsToTheHookAndCockpitCommandsToTheExportScript()
   {
-    var dcs = new TcpListener(IPAddress.Loopback, 0);
-    dcs.Start();
+    var hook = new TcpListener(IPAddress.Loopback, 0);
+    var cockpit = new TcpListener(IPAddress.Loopback, 0);
+    hook.Start();
+    cockpit.Start();
     try
     {
-      var sender = new DcsSender(((IPEndPoint)dcs.LocalEndpoint).Port);
-      var accept = dcs.AcceptTcpClientAsync(TestContext.Current.CancellationToken);
+      var sender = new DcsSender(((IPEndPoint)hook.LocalEndpoint).Port, ((IPEndPoint)cockpit.LocalEndpoint).Port);
 
-      var sent = await sender.SetCrosshairVisibleAsync(true);
-      using var client = await accept;
-      using var reader = new StreamReader(client.GetStream());
-      var received = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
-
-      Assert.True(sent);
-      Assert.Equal(DcsProtocol.CreateCrosshairCommand(true) + "\n", received);
+      Assert.True(await sender.SetCrosshairVisibleAsync(true));
+      Assert.Equal(DcsProtocol.CreateCrosshairCommand(true) + "\n", await ReadCommandAsync(hook));
+      Assert.True(await sender.CancelWaypointsAsync());
+      Assert.Equal(DcsProtocol.CreateCancelCommand() + "\n", await ReadCommandAsync(cockpit));
+      ButtonPress[] presses = [new(17, 3032, 150, -1)];
+      Assert.True(await sender.SendWaypointsAsync(3, presses));
+      Assert.Equal(DcsProtocol.CreateWaypointsCommand(3, presses) + "\n", await ReadCommandAsync(cockpit));
     }
     finally
     {
-      dcs.Stop();
+      hook.Stop();
+      cockpit.Stop();
     }
   }
 
@@ -93,10 +126,20 @@ public class DcsConnectionTests
     probe.Start();
     var closedPort = ((IPEndPoint)probe.LocalEndpoint).Port;
     probe.Stop();
+    var sender = new DcsSender(closedPort, closedPort);
 
-    var sent = await new DcsSender(closedPort).SetCrosshairVisibleAsync(true);
+    Assert.False(await sender.SetCrosshairVisibleAsync(true));
+    Assert.False(await sender.CancelWaypointsAsync());
+  }
 
-    Assert.False(sent);
+  private static async Task SendAsync(UdpClient dcs, DcsListener listener, string message) =>
+    await dcs.SendAsync(Encoding.UTF8.GetBytes(message), new IPEndPoint(IPAddress.Loopback, listener.Port), TestContext.Current.CancellationToken);
+
+  private static async Task<string> ReadCommandAsync(TcpListener listener)
+  {
+    using var client = await listener.AcceptTcpClientAsync(TestContext.Current.CancellationToken);
+    using var reader = new StreamReader(client.GetStream());
+    return await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
   }
 
   private static async Task WaitUntilAsync(Func<bool> condition)
