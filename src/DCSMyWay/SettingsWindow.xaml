@@ -27,6 +27,14 @@
         Header="Transfer starts at"
         OffContent="Next steerpoint"
         OnContent="Active steerpoint" />
+      <RadioButtons
+        x:Name="ThemeButtons"
+        Header="Theme"
+        MaxColumns="3">
+        <x:String>System</x:String>
+        <x:String>Light</x:String>
+        <x:String>Dark</x:String>
+      </RadioButtons>
     </StackPanel>
   </Grid>
 </Window>

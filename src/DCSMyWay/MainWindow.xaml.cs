@@ -2,6 +2,7 @@ using DCSMyWay.Interop;
 using DCSMyWay.Models;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 
 namespace DCSMyWay;
 
@@ -38,10 +39,28 @@ public sealed partial class MainWindow : Window
 
   public void SetActivatable(bool activatable) => WindowInterop.SetActivatable(this, activatable);
 
+  public async Task<ContentDialogResult> ShowWithKeyboardAsync(ContentDialog dialog)
+  {
+    var previous = NativeMethods.GetForegroundWindow();
+    SetActivatable(true);
+    NativeMethods.SetForegroundWindow(Hwnd);
+    try
+    {
+      return await dialog.ShowAsync();
+    }
+    finally
+    {
+      var dontTakeFocus = App.Settings.Current.DontTakeFocus;
+      SetActivatable(!dontTakeFocus);
+      if (dontTakeFocus && previous != Hwnd) NativeMethods.SetForegroundWindow(previous);
+    }
+  }
+
   private void ApplySettings(AppSettings settings)
   {
     if (AppWindow.Presenter is OverlappedPresenter presenter) presenter.IsAlwaysOnTop = settings.AlwaysOnTop;
     SetActivatable(!settings.DontTakeFocus);
+    WindowInterop.SetTheme(this, settings.Theme);
   }
 
   private void SettingsButton_Click(object sender, RoutedEventArgs e)

@@ -70,13 +70,26 @@ public static class DcsProtocol
       : null,
     step.IsChecked ? step.Tries : null,
     step.IsChecked ? step.Timeout : null,
-    step.Failure);
+    step.Failure,
+    step.Options?.Select(CreateOptionCommand).ToList(),
+    step.Otherwise is { } otherwise ? CreatePressCommand(otherwise) : null);
+
+  private static OptionCommand CreateOptionCommand(StepOption option) => new(
+    CreateCheckCommand(option.When),
+    option.Press?.Device,
+    option.Press?.Code,
+    option.Press?.Delay,
+    option.Press?.Activate,
+    option.Press?.AddDepress);
 
   private static PressCommand CreatePressCommand(ButtonPress press) =>
     new(press.Device, press.Code, press.Delay, press.Activate, press.AddDepress);
 
   private static List<CheckCommand>? CreateCheckCommands(IReadOnlyList<IndicationCheck>? checks) =>
-    checks?.Select(c => new CheckCommand(c.Indicator, c.Element, c.Pattern, c.Values?.ToList())).ToList();
+    checks?.Select(CreateCheckCommand).ToList();
+
+  private static CheckCommand CreateCheckCommand(IndicationCheck check) =>
+    new(check.Indicator, check.Element, check.Pattern, check.Values?.ToList());
 
   public static string CreateCancelCommand() =>
     JsonSerializer.Serialize(new CancelCommand("cancel"), DcsJsonContext.Default.CancelCommand);
@@ -121,7 +134,11 @@ internal sealed record StepCommand(
   SelectCommand? Select,
   int? Tries,
   int? Timeout,
-  string? Failure);
+  string? Failure,
+  List<OptionCommand>? Options,
+  PressCommand? Otherwise);
+
+internal sealed record OptionCommand(CheckCommand When, int? Device, int? Code, int? Delay, double? Activate, bool? Depress);
 
 internal sealed record PressCommand(int Device, int Code, int Delay, double Activate, bool Depress);
 

@@ -94,8 +94,8 @@
       </ListView.ItemContainerTransitions>
       <ListView.ItemContainerStyle>
         <Style BasedOn="{StaticResource DefaultListViewItemStyle}" TargetType="ListViewItem">
-          <Setter Property="MinHeight" Value="32" />
-          <Setter Property="Padding" Value="8,0,4,0" />
+          <Setter Property="MinHeight" Value="40" />
+          <Setter Property="Padding" Value="8,2,4,2" />
         </Style>
       </ListView.ItemContainerStyle>
       <ListView.ItemTemplate>
@@ -103,8 +103,8 @@
           <Grid ColumnSpacing="6">
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="14" />
-              <ColumnDefinition Width="Auto" />
               <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
               <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <FontIcon
@@ -113,18 +113,28 @@
               Foreground="{ThemeResource SystemFillColorSuccessBrush}"
               Glyph="&#xE73E;"
               Visibility="{x:Bind IsTransferred, Mode=OneWay}" />
-            <TextBlock
-              Grid.Column="1"
-              VerticalAlignment="Center"
-              Style="{StaticResource BodyStrongTextBlockStyle}"
-              Text="{x:Bind Waypoint.Name}" />
-            <TextBlock
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+              <TextBlock
+                Style="{StaticResource BodyStrongTextBlockStyle}"
+                Text="{x:Bind Waypoint.Name, Mode=OneWay}"
+                TextTrimming="CharacterEllipsis"
+                TextWrapping="NoWrap" />
+              <TextBlock
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Style="{StaticResource CaptionTextBlockStyle}"
+                Text="{x:Bind local:MainPage.Describe(Waypoint.Latitude, Waypoint.Longitude, Waypoint.ElevationMeters)}"
+                TextTrimming="CharacterEllipsis"
+                TextWrapping="NoWrap" />
+            </StackPanel>
+            <Button
               Grid.Column="2"
-              VerticalAlignment="Center"
-              Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-              Style="{StaticResource CaptionTextBlockStyle}"
-              Text="{x:Bind local:MainPage.Describe(Waypoint.Latitude, Waypoint.Longitude, Waypoint.ElevationMeters)}"
-              TextTrimming="CharacterEllipsis" />
+              Padding="6,4"
+              AutomationProperties.Name="Rename"
+              Click="RenameWaypointButton_Click"
+              Style="{StaticResource SubtleButtonStyle}"
+              ToolTipService.ToolTip="Rename">
+              <FontIcon FontSize="12" Glyph="&#xE70F;" />
+            </Button>
             <Button
               Grid.Column="3"
               Padding="6,4"
@@ -183,6 +193,20 @@
       DefaultButton="Close"
       PrimaryButtonText="Transfer again">
       <TextBlock x:Name="RepeatTransferText" TextWrapping="Wrap" />
+    </ContentDialog>
+
+    <ContentDialog
+      x:Name="RenameDialog"
+      Title="Rename waypoint"
+      CloseButtonText="Cancel"
+      DefaultButton="Primary"
+      Opened="RenameDialog_Opened"
+      PrimaryButtonText="Rename">
+      <TextBox
+        x:Name="RenameBox"
+        AutomationProperties.AutomationId="RenameBox"
+        CharacterCasing="Upper"
+        TextChanged="RenameBox_TextChanged" />
     </ContentDialog>
   </Grid>
 </Page>

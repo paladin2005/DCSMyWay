@@ -13,6 +13,7 @@ public sealed partial class MainPage : Page
 {
   private static readonly TimeSpan DcsSyncDelay = TimeSpan.FromSeconds(1);
   private static readonly TimeSpan TransferStartTimeout = TimeSpan.FromSeconds(3);
+  private const string NameRules = "Up to 12 letters, digits or periods, starting with a letter";
 
   private readonly ObservableCollection<WaypointItem> _items = [];
   private readonly TransferHistory _transferHistory = new();
@@ -27,11 +28,13 @@ public sealed partial class MainPage : Page
   private int? _failureShownTransferId;
   private int _nextWaypointNumber = 1;
   private bool _wasConnected;
+  private WaypointItem? _renamingItem;
 
   public MainPage()
   {
     InitializeComponent();
     WaypointList.ItemsSource = _items;
+    RenameBox.MaxLength = Waypoint.MaxNameLength;
     Loaded += OnLoaded;
     Unloaded += OnUnloaded;
   }
@@ -144,6 +147,7 @@ public sealed partial class MainPage : Page
 
   private async Task AddWaypointAsync(DcsPosition position)
   {
+    while (IsNameTaken($"W{_nextWaypointNumber}", null)) _nextWaypointNumber++;
     var number = _nextWaypointNumber++;
     var waypoint = new Waypoint(_nextWaypointId++, $"W{number}", position.Latitude, position.Longitude, position.ElevationMeters);
     var item = new WaypointItem(waypoint);
@@ -175,8 +179,7 @@ public sealed partial class MainPage : Page
     var aircraft = SupportedAircraft.Find(state?.Position.Module);
     if (state is null || aircraft is null)
     {
-      var supported = string.Join(" and ", SupportedAircraft.All.Select(a => a.Name));
-      ShowMessage(InfoBarSeverity.Warning, $"Only the {supported} are supported for now ({state?.Position.Module ?? "no aircraft"})");
+      ShowMessage(InfoBarSeverity.Warning, $"Only the {SupportedAircraft.Names} are supported for now ({state?.Position.Module ?? "no aircraft"})");
       return;
     }
 
@@ -259,6 +262,37 @@ public sealed partial class MainPage : Page
     _transferMessage = null;
     ShowMessage(InfoBarSeverity.Warning, "Transfer cancelled. Waypoints with a checkmark were entered");
   }
+
+  private async void RenameWaypointButton_Click(object sender, RoutedEventArgs e)
+  {
+    if (((FrameworkElement)sender).DataContext is not WaypointItem item) return;
+    _renamingItem = item;
+    RenameBox.Text = item.Waypoint.Name;
+    ValidateRename();
+    if (await App.MainWindow.ShowWithKeyboardAsync(RenameDialog) != ContentDialogResult.Primary || RenameBox.Text == item.Waypoint.Name) return;
+    item.Waypoint = item.Waypoint with { Name = RenameBox.Text };
+    Refresh();
+    await App.DcsSender.ShowRouteAsync(Waypoints);
+  }
+
+  private void RenameDialog_Opened(ContentDialog sender, ContentDialogOpenedEventArgs args)
+  {
+    RenameBox.Focus(FocusState.Programmatic);
+    RenameBox.SelectAll();
+  }
+
+  private void RenameBox_TextChanged(object sender, TextChangedEventArgs e) => ValidateRename();
+
+  private void ValidateRename()
+  {
+    var name = RenameBox.Text;
+    var taken = IsNameTaken(name, _renamingItem);
+    RenameDialog.IsPrimaryButtonEnabled = Waypoint.IsValidName(name) && !taken;
+    RenameBox.Description = taken ? "Another waypoint already has this name" : NameRules;
+  }
+
+  private bool IsNameTaken(string name, WaypointItem? except) =>
+    _items.Any(i => i != except && i.Waypoint.Name == name);
 
   private async void DeleteWaypointButton_Click(object sender, RoutedEventArgs e)
   {
