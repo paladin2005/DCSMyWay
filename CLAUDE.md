@@ -57,7 +57,6 @@ A modern, low-memory replacement for DCSTheWay (`C:\Workspace\DCSTheWay`) that i
 ## Stack
 
 - .NET 10, WinUI 3 (Windows App SDK 2.5), x64 only
-- The route map is a WebView2 window running Leaflet 1.9.4, bundled in `src/DCSMyWay/Assets/Map` (BSD-2, verified against the npm registry integrity hash) and served through a virtual host; map tiles come from OpenTopoMap and OpenStreetMap over the internet
 - Unpackaged and self-contained: the publish folder runs on any PC without installing runtimes
 - No Visual Studio on this machine; everything builds with the `dotnet` CLI
 
@@ -79,7 +78,6 @@ dotnet publish src/DCSMyWay -c Release
 - Don't use `RuntimeInfo.AsString`: in self-contained mode it throws trying to load `Microsoft.WindowsAppRuntime.Insights.Resource.dll`
 - Resolve file paths from `AppContext.BaseDirectory`, never from the working directory
 - Native AOT needs the MSVC linker (Visual Studio Build Tools, "Desktop development with C++"), which is not installed
-- The map window's WebView2 adds about 170 MB of private memory while it is open (started with `--disable-gpu --renderer-process-limit=1` to keep it lower) and releases it on close; its profile lives in `%LocalAppData%\DCSMyWay\WebView2`
 - Startup crashes show up as `0xC000027B`; the real exception is written to `%TEMP%\DCSMyWay-crash.log`
 - Tests run on Microsoft.Testing.Platform (xUnit v3), enabled in `global.json`; the old VSTest packages are not needed
 - The app build is self-contained, so the test project sets `ValidateExecutableReferencesMatchSelfContained=false` to reference it; tests must only use plain logic, never WinUI types
