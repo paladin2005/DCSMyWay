@@ -10,7 +10,7 @@ local DialogLoader = require('DialogLoader')
 local SkinUtils = require('SkinUtils')
 local Terrain = require('terrain')
 
-local VERSION = '0.5.0'
+local VERSION = '0.6.0'
 local HOST = '127.0.0.1'
 local APP_PORT = 42080
 local COMMAND_PORT = 42081
@@ -60,6 +60,8 @@ local presses
 local pressIndex = 1
 local pressed
 local releaseAt = 0
+local transferId
+local donePresses = 0
 local overlay
 local acceptWindow
 local crosshairVisible = false
@@ -177,7 +179,8 @@ end
 
 local function positionMessage(messageType, position)
   return string.format(
-    '{"type":"%s","model":%s,"lat":%.9f,"lon":%.9f,"elev":%.3f,"crosshair":%s,"busy":%s,"aircraftId":%s,"steerpoint":%s}',
+    '{"type":"%s","model":%s,"lat":%.9f,"lon":%.9f,"elev":%.3f,"crosshair":%s,"busy":%s,"aircraftId":%s,"steerpoint":%s,'
+      .. '"transferId":%s,"done":%d}',
     messageType,
     jsonString(position.model),
     position.latitude,
@@ -186,7 +189,9 @@ local function positionMessage(messageType, position)
     tostring(crosshairVisible),
     tostring(presses ~= nil),
     formatAircraftId(position.aircraftId) or 'null',
-    steerpoint and string.format('%d', steerpoint) or 'null')
+    steerpoint and string.format('%d', steerpoint) or 'null',
+    transferId and string.format('%d', transferId) or 'null',
+    donePresses)
 end
 
 local function send(message)
@@ -353,7 +358,7 @@ local function stopPresses()
   pressed = nil
 end
 
-local function startPresses(list)
+local function startPresses(list, id)
   if presses then
     report('Ignoring waypoints while the previous ones are being entered')
     showStatus('Still entering waypoints')
@@ -363,6 +368,8 @@ local function startPresses(list)
   presses = list
   pressIndex = 1
   pressed = nil
+  transferId = type(id) == 'number' and id or nil
+  donePresses = 0
   setCrosshairVisible(false)
   info('Entering ' .. #list .. ' button presses')
 end
@@ -381,6 +388,7 @@ local function stepPresses(now)
     if pressed.depress then Export.GetDevice(pressed.device):performClickableAction(pressed.code, 0) end
     pressed = nil
     pressIndex = pressIndex + 1
+    donePresses = pressIndex - 1
     return
   end
   local press = presses[pressIndex]
@@ -436,7 +444,7 @@ local function handleCommand(line)
   if command.type == 'crosshair' then
     setCrosshairVisible(command.visible == true)
   elseif command.type == 'waypoints' then
-    startPresses(command.presses)
+    startPresses(command.presses, command.id)
   elseif command.type == 'cancel' then
     cancelPresses()
   elseif command.type == 'status' then
@@ -516,6 +524,8 @@ callbacks.onSimulationStop = guarded(function()
   steerpoint = nil
   nextSteerpointAt = 0
   unknownDedLogged = false
+  transferId = nil
+  donePresses = 0
   lastError = nil
 end)
 

@@ -1,3 +1,4 @@
+using System.Globalization;
 using DCSMyWay.Models;
 
 namespace DCSMyWay.Aircraft;
@@ -12,6 +13,7 @@ public static class F16
   private const int Enter = 3016;
   private const int ShortDelay = 10;
   private const int LongDelay = 150;
+  private const int ReturnPresses = 3;
 
   private static readonly Dictionary<char, int> DigitCodes = new()
   {
@@ -40,15 +42,12 @@ public static class F16
     CoordinateFormat.ToDegreesMinutes(waypoint.Longitude, 3, 3),
     CoordinateFormat.ToFeet(waypoint.ElevationMeters));
 
-  public static List<ButtonPress> CreateButtonPresses(IEnumerable<CockpitWaypoint> waypoints, bool startAtActiveSteerpoint = true, int extraDelay = 0)
+  public static TransferSequence CreateTransfer(IEnumerable<CockpitWaypoint> waypoints, int startSteerpoint, int extraDelay = 0)
   {
     var shortDelay = ShortDelay + extraDelay;
     var longDelay = LongDelay + extraDelay;
-    var presses = new List<ButtonPress>
-    {
-      new(Icp, ReturnSwitch, longDelay, -1),
-      new(Icp, DigitCodes['4'], longDelay),
-    };
+    var presses = new List<ButtonPress>();
+    var waypointEnteredAfter = new List<int>();
 
     void TypeDigits(string text)
     {
@@ -58,10 +57,15 @@ public static class F16
       }
     }
 
+    for (var i = 0; i < ReturnPresses; i++) presses.Add(new(Icp, ReturnSwitch, longDelay, -1));
+    presses.Add(new(Icp, DigitCodes['4'], longDelay));
+    TypeDigits(startSteerpoint.ToString(CultureInfo.InvariantCulture));
+    presses.Add(new(Icp, Enter, shortDelay));
+
     var isFirst = true;
     foreach (var waypoint in waypoints)
     {
-      if (!isFirst || !startAtActiveSteerpoint) presses.Add(new(Icp, SteerpointIncrement, longDelay));
+      if (!isFirst) presses.Add(new(Icp, SteerpointIncrement, longDelay));
       isFirst = false;
       presses.Add(new(Icp, DobberDown, longDelay, -1));
       presses.Add(new(Icp, DobberDown, longDelay, -1));
@@ -75,10 +79,11 @@ public static class F16
       presses.Add(new(Icp, DobberDown, longDelay, -1));
       TypeDigits(waypoint.ElevationFeet);
       presses.Add(new(Icp, Enter, shortDelay));
+      waypointEnteredAfter.Add(presses.Count);
       for (var i = 0; i < 4; i++) presses.Add(new(Icp, DobberUp, longDelay));
     }
 
     presses.Add(new(Icp, ReturnSwitch, longDelay, -1));
-    return presses;
+    return new TransferSequence(presses, waypointEnteredAfter);
   }
 }

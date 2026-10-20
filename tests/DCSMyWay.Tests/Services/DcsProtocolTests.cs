@@ -9,13 +9,13 @@ public class DcsProtocolTests
   [Fact]
   public void ParsesTheCameraMessageSentByTheDcsScript()
   {
-    var json = """{"type":"camera","model":"F-16C_50","lat":41.905925545,"lon":43.783457188,"elev":1677.665,"crosshair":true,"busy":false,"aircraftId":16777472,"steerpoint":3}""";
+    var json = """{"type":"camera","model":"F-16C_50","lat":41.905925545,"lon":43.783457188,"elev":1677.665,"crosshair":true,"busy":false,"aircraftId":16777472,"steerpoint":3,"transferId":7,"done":42}""";
 
     var parsed = DcsProtocol.TryParseMessage(Encoding.UTF8.GetBytes(json), out var message);
 
     Assert.True(parsed);
     var position = new DcsPosition("F-16C_50", 41.905925545, 43.783457188, 1677.665);
-    Assert.Equal(new DcsMessage(DcsMessageType.Camera, new DcsState(position, true, false, 16777472, 3)), message);
+    Assert.Equal(new DcsMessage(DcsMessageType.Camera, new DcsState(position, true, false, 16777472, 3, 7, 42)), message);
   }
 
   [Fact]
@@ -32,9 +32,9 @@ public class DcsProtocolTests
   }
 
   [Theory]
-  [InlineData(""","aircraftId":null,"steerpoint":null""")]
+  [InlineData(""","aircraftId":null,"steerpoint":null,"transferId":null,"done":0""")]
   [InlineData("")]
-  public void HasNoAircraftIdOrSteerpointWhenDcsDoesNotReportThem(string optionalFields)
+  public void HasNoAircraftSteerpointOrTransferWhenDcsDoesNotReportThem(string optionalFields)
   {
     var json = $$"""{"type":"camera","model":"Spectator","lat":1,"lon":2,"elev":3,"crosshair":false,"busy":false{{optionalFields}}}""";
 
@@ -43,6 +43,8 @@ public class DcsProtocolTests
     Assert.True(parsed);
     Assert.Null(message!.State.AircraftId);
     Assert.Null(message.State.ActiveSteerpoint);
+    Assert.Null(message.State.TransferId);
+    Assert.Equal(0, message.State.PressesDone);
   }
 
   [Theory]
@@ -64,10 +66,10 @@ public class DcsProtocolTests
   {
     ButtonPress[] presses = [new(17, 3032, 150, -1), new(20, 3026, 100, 0.2, AddDepress: false)];
 
-    var command = DcsProtocol.CreateWaypointsCommand(presses);
+    var command = DcsProtocol.CreateWaypointsCommand(7, presses);
 
     Assert.Equal(
-      """{"type":"waypoints","presses":[{"device":17,"code":3032,"delay":150,"activate":-1,"depress":true},{"device":20,"code":3026,"delay":100,"activate":0.2,"depress":false}]}""",
+      """{"type":"waypoints","id":7,"presses":[{"device":17,"code":3032,"delay":150,"activate":-1,"depress":true},{"device":20,"code":3026,"delay":100,"activate":0.2,"depress":false}]}""",
       command);
   }
 

@@ -22,6 +22,7 @@ public sealed partial class MainPage : Page
   private string? _transferMessage;
   private bool _transferStarted;
   private int _nextWaypointId = 1;
+  private int _nextTransferId = 1;
   private int _nextWaypointNumber = 1;
   private bool _wasConnected;
 
@@ -82,6 +83,7 @@ public sealed partial class MainPage : Page
       && (cancelling || _items.Count > 0)
       && DateTimeOffset.UtcNow - _transferClickedUtc > DcsSyncDelay;
     ClearButton.IsEnabled = _items.Count > 0;
+    if (state is not null) _transferHistory.UpdateProgress(state.TransferId, state.PressesDone);
     RefreshTransferMarks(state?.AircraftId);
   }
 
@@ -122,7 +124,7 @@ public sealed partial class MainPage : Page
 
   private void RefreshTransferMarks(long? aircraftId)
   {
-    foreach (var item in _items) item.IsTransferred = !IsTransferInProgress && _transferHistory.Contains(aircraftId, item.Waypoint);
+    foreach (var item in _items) item.IsTransferred = _transferHistory.IsEntered(aircraftId, item.Waypoint);
   }
 
   private void OnMarkReceived(object? sender, DcsPosition position) =>
@@ -165,21 +167,36 @@ public sealed partial class MainPage : Page
     }
 
     var waypoints = Waypoints;
-    _transferClickedUtc = DateTimeOffset.UtcNow;
-    TransferButton.IsEnabled = false;
-    if (_transferHistory.IsRepeat(state.AircraftId, waypoints) && await RepeatTransferDialog.ShowAsync() != ContentDialogResult.Primary)
+    var pending = _transferHistory.Pending(state.AircraftId, waypoints);
+    int start;
+    if (pending.Waypoints.Count == 0)
     {
-      _transferClickedUtc = default;
-      Refresh();
+      start = _transferHistory.SteerpointOf(state.AircraftId, waypoints[0]) ?? 1;
+      if (!await ConfirmTransferAgainAsync(start)) return;
+      pending = new PendingTransfer(waypoints, start);
+    }
+    else if (pending.StartSteerpoint is { } next)
+    {
+      start = next;
+    }
+    else if (state.ActiveSteerpoint is { } active)
+    {
+      start = App.Settings.Current.StartAtActiveSteerpoint ? active : active + 1;
+    }
+    else
+    {
+      ShowMessage(InfoBarSeverity.Warning, "Put the DED on its main page so DCSMyWay can read the active steerpoint");
       return;
     }
 
     _transferClickedUtc = DateTimeOffset.UtcNow;
-    var presses = F16.CreateButtonPresses(waypoints.Select(F16.Format), App.Settings.Current.StartAtActiveSteerpoint);
-    if (await App.DcsSender.SendWaypointsAsync(presses))
+    TransferButton.IsEnabled = false;
+    var sequence = F16.CreateTransfer(pending.Waypoints.Select(F16.Format), start);
+    var transferId = _nextTransferId++;
+    if (await App.DcsSender.SendWaypointsAsync(transferId, sequence.Presses))
     {
-      _transferHistory.Record(state.AircraftId, waypoints);
-      _transferMessage = $"Entering {waypoints.Count} waypoints, don't touch the cockpit controls";
+      _transferHistory.Record(state.AircraftId, transferId, pending.Waypoints, start, sequence.WaypointEnteredAfter);
+      _transferMessage = $"Entering {pending.Waypoints.Count} waypoints from steerpoint {start}, don't touch the cockpit controls";
       _transferStarted = false;
       ShowMessage(InfoBarSeverity.Informational, _transferMessage);
       return;
@@ -187,6 +204,17 @@ public sealed partial class MainPage : Page
 
     _transferClickedUtc = default;
     ShowMessage(InfoBarSeverity.Error, "DCS is not reachable");
+  }
+
+  private async Task<bool> ConfirmTransferAgainAsync(int start)
+  {
+    _transferClickedUtc = DateTimeOffset.UtcNow;
+    TransferButton.IsEnabled = false;
+    RepeatTransferText.Text = $"All these waypoints are already in this aircraft. They will be entered again starting at steerpoint {start}.";
+    if (await RepeatTransferDialog.ShowAsync() == ContentDialogResult.Primary) return true;
+    _transferClickedUtc = default;
+    Refresh();
+    return false;
   }
 
   private async Task CancelTransferAsync()
@@ -199,9 +227,8 @@ public sealed partial class MainPage : Page
       return;
     }
 
-    _transferHistory.Clear();
     _transferMessage = null;
-    ShowMessage(InfoBarSeverity.Warning, "Transfer cancelled. The steerpoint being entered may be incomplete");
+    ShowMessage(InfoBarSeverity.Warning, "Transfer cancelled. Waypoints with a checkmark were entered");
   }
 
   private async void DeleteWaypointButton_Click(object sender, RoutedEventArgs e)

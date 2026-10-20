@@ -40,17 +40,24 @@ public static class DcsProtocol
     if (type is null) return false;
 
     var position = new DcsPosition(incoming.Model, latitude, longitude, elevation);
-    var state = new DcsState(position, incoming.Crosshair == true, incoming.Busy == true, incoming.AircraftId, incoming.Steerpoint);
+    var state = new DcsState(
+      position,
+      incoming.Crosshair == true,
+      incoming.Busy == true,
+      incoming.AircraftId,
+      incoming.Steerpoint,
+      incoming.TransferId,
+      incoming.Done ?? 0);
     message = new DcsMessage(type.Value, state);
     return true;
   }
 
-  public static string CreateWaypointsCommand(IEnumerable<ButtonPress> presses)
+  public static string CreateWaypointsCommand(int transferId, IEnumerable<ButtonPress> presses)
   {
     var commands = presses
       .Select(p => new ButtonPressCommand(p.Device, p.Code, p.Delay, p.Activate, p.AddDepress))
       .ToList();
-    return JsonSerializer.Serialize(new WaypointsCommand("waypoints", commands), DcsJsonContext.Default.WaypointsCommand);
+    return JsonSerializer.Serialize(new WaypointsCommand("waypoints", transferId, commands), DcsJsonContext.Default.WaypointsCommand);
   }
 
   public static string CreateCancelCommand() =>
@@ -78,9 +85,11 @@ internal sealed record IncomingMessage(
   bool? Crosshair,
   bool? Busy,
   long? AircraftId,
-  int? Steerpoint);
+  int? Steerpoint,
+  int? TransferId,
+  int? Done);
 
-internal sealed record WaypointsCommand(string Type, List<ButtonPressCommand> Presses);
+internal sealed record WaypointsCommand(string Type, int Id, List<ButtonPressCommand> Presses);
 
 internal sealed record ButtonPressCommand(int Device, int Code, int Delay, double Activate, bool Depress);
 
