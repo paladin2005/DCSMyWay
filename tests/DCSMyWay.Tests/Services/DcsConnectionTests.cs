@@ -15,11 +15,11 @@ public class DcsConnectionTests
     Assert.True(listener.TryStart());
     using var dcs = new UdpClient();
 
-    var message = """{"type":"camera","model":"F-16C_50","lat":41.9,"lon":43.7,"elev":1677.5,"crosshair":true,"busy":false}""";
+    var message = """{"type":"camera","model":"F-16C_50","lat":41.9,"lon":43.7,"elev":1677.5,"crosshair":true,"busy":false,"aircraftId":16777472}""";
     await dcs.SendAsync(Encoding.UTF8.GetBytes(message), new IPEndPoint(IPAddress.Loopback, listener.Port), TestContext.Current.CancellationToken);
     await WaitUntilAsync(() => listener.IsConnected);
 
-    Assert.Equal(new DcsState(new DcsPosition("F-16C_50", 41.9, 43.7, 1677.5), true, false), listener.Latest);
+    Assert.Equal(new DcsState(new DcsPosition("F-16C_50", 41.9, 43.7, 1677.5), true, false, 16777472), listener.Latest);
   }
 
   [Fact]

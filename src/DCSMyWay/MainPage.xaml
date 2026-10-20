@@ -95,5 +95,14 @@
       Grid.Row="5"
       AutomationProperties.AutomationId="MessageBar"
       IsClosable="True" />
+
+    <ContentDialog
+      x:Name="RepeatTransferDialog"
+      Title="Transfer again?"
+      CloseButtonText="Cancel"
+      DefaultButton="Close"
+      PrimaryButtonText="Transfer again">
+      <TextBlock Text="These waypoints were already transferred to this aircraft. Select the steerpoint to start from in the cockpit before transferring again." TextWrapping="Wrap" />
+    </ContentDialog>
   </Grid>
 </Page>

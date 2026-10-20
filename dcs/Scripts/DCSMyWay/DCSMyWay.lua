@@ -10,7 +10,7 @@ local DialogLoader = require('DialogLoader')
 local SkinUtils = require('SkinUtils')
 local Terrain = require('terrain')
 
-local VERSION = '0.2.2'
+local VERSION = '0.3.0'
 local HOST = '127.0.0.1'
 local APP_PORT = 42080
 local COMMAND_PORT = 42081
@@ -70,6 +70,7 @@ local mainView
 local mainViewLoaded = false
 local lastLayout
 local lastError
+local lastAircraftId
 
 local function info(message)
   log.write('DCSMYWAY', log.INFO, message)
@@ -96,6 +97,17 @@ local function jsonString(value)
   return '"' .. escaped .. '"'
 end
 
+local function readAircraftId()
+  if not Export.LoGetPlayerPlaneId then return nil end
+  local read, id = pcall(Export.LoGetPlayerPlaneId)
+  if read and type(id) == 'number' and id > 0 then return id end
+  return nil
+end
+
+local function formatAircraftId(id)
+  return id and string.format('%.0f', id) or nil
+end
+
 local function readCamera()
   local camera = Export.LoGetCameraPosition()
   if not camera or not camera.p then return nil end
@@ -105,6 +117,7 @@ local function readCamera()
   local aircraft = Export.LoGetSelfData()
   return {
     model = aircraft and aircraft.Name or 'Spectator',
+    aircraftId = readAircraftId(),
     latitude = latitude,
     longitude = longitude,
     elevation = Export.LoGetAltitude(x, z),
@@ -113,14 +126,15 @@ end
 
 local function positionMessage(messageType, position)
   return string.format(
-    '{"type":"%s","model":%s,"lat":%.9f,"lon":%.9f,"elev":%.3f,"crosshair":%s,"busy":%s}',
+    '{"type":"%s","model":%s,"lat":%.9f,"lon":%.9f,"elev":%.3f,"crosshair":%s,"busy":%s,"aircraftId":%s}',
     messageType,
     jsonString(position.model),
     position.latitude,
     position.longitude,
     position.elevation,
     tostring(crosshairVisible),
-    tostring(presses ~= nil))
+    tostring(presses ~= nil),
+    formatAircraftId(position.aircraftId) or 'null')
 end
 
 local function send(message)
@@ -410,7 +424,13 @@ local function frame()
   if now >= nextCameraAt then
     nextCameraAt = now + CAMERA_INTERVAL
     local position = readCamera()
-    if position then send(positionMessage('camera', position)) end
+    if position then
+      send(positionMessage('camera', position))
+      if position.aircraftId ~= lastAircraftId then
+        lastAircraftId = position.aircraftId
+        info('Player aircraft is now ' .. (formatAircraftId(lastAircraftId) or 'none') .. ' (' .. position.model .. ')')
+      end
+    end
   end
 
   if markSentAt and now - markSentAt > MARK_TIMEOUT then
@@ -430,6 +450,7 @@ callbacks.onSimulationStop = guarded(function()
   closeSockets()
   markSentAt = nil
   routeMarks = {}
+  lastAircraftId = nil
   lastError = nil
 end)
 
