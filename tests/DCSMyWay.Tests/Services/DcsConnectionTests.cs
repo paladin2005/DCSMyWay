@@ -108,9 +108,9 @@ public class DcsConnectionTests
       Assert.Equal(DcsProtocol.CreateCrosshairCommand(true) + "\n", await ReadCommandAsync(hook));
       Assert.True(await sender.CancelWaypointsAsync());
       Assert.Equal(DcsProtocol.CreateCancelCommand() + "\n", await ReadCommandAsync(cockpit));
-      ButtonPress[] presses = [new(17, 3032, 150, -1)];
-      Assert.True(await sender.SendWaypointsAsync(3, presses));
-      Assert.Equal(DcsProtocol.CreateWaypointsCommand(3, presses) + "\n", await ReadCommandAsync(cockpit));
+      CockpitStep[] steps = [new(new(17, 3032, 150, -1))];
+      Assert.True(await sender.SendWaypointsAsync(3, steps));
+      Assert.Equal(DcsProtocol.CreateWaypointsCommand(3, steps) + "\n", await ReadCommandAsync(cockpit));
     }
     finally
     {

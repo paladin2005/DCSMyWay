@@ -41,7 +41,8 @@ public sealed class DcsListener(int port) : IDisposable
         camera.AircraftId,
         cockpit?.ActiveSteerpoint,
         cockpit?.TransferId,
-        cockpit?.PressesDone ?? 0);
+        cockpit?.PressesDone ?? 0,
+        cockpit?.TransferFailure);
     }
   }
 

@@ -16,6 +16,8 @@ public class F16Tests
   private static List<ButtonPress> TheWayWaypointPresses(TheWayFixture fixture) =>
     [.. fixture.Buttons.Select(b => b.ToButtonPress()).Skip(3)];
 
+  private static List<ButtonPress> Presses(TransferSequence sequence) => [.. sequence.Steps.Select(s => s.Press!)];
+
   [Fact]
   public void SelectsTheStartSteerpointAndThenEntersWaypointsLikeTheWay()
   {
@@ -23,7 +25,7 @@ public class F16Tests
 
     var sequence = F16.CreateTransfer(fixture.Waypoints!.Select(w => w.ToCockpitWaypoint()), 3);
 
-    Assert.Equal([Return, Return, Return, SteerpointPage, Digit3, Enter, .. TheWayWaypointPresses(fixture)], sequence.Presses);
+    Assert.Equal([Return, Return, Return, SteerpointPage, Digit3, Enter, .. TheWayWaypointPresses(fixture)], Presses(sequence));
   }
 
   [Fact]
@@ -33,7 +35,7 @@ public class F16Tests
 
     var sequence = F16.CreateTransfer(fixture.Raw!.Select(w => F16.Format(w.ToWaypoint())), 12);
 
-    Assert.Equal([Return, Return, Return, SteerpointPage, Digit1, Digit2, Enter, .. TheWayWaypointPresses(fixture)], sequence.Presses);
+    Assert.Equal([Return, Return, Return, SteerpointPage, Digit1, Digit2, Enter, .. TheWayWaypointPresses(fixture)], Presses(sequence));
   }
 
   [Fact]
@@ -51,7 +53,7 @@ public class F16Tests
   {
     var waypoints = TheWayFixture.Load("F16.json").Waypoints!.Select(w => w.ToCockpitWaypoint()).ToList();
 
-    var presses = F16.CreateTransfer(waypoints, 1).Presses;
+    var presses = Presses(F16.CreateTransfer(waypoints, 1));
 
     Assert.Equal(waypoints.Count - 1, presses.Count(p => p.Code == 3030));
     Assert.NotEqual(3030, presses[6].Code);
@@ -66,7 +68,7 @@ public class F16Tests
 
     var sequence = F16.CreateTransfer(waypoints, startSteerpoint);
 
-    var waypointEnters = sequence.Presses
+    var waypointEnters = Presses(sequence)
       .Select((press, index) => (press, index))
       .Where(p => p.press == Enter)
       .Skip(1)
@@ -74,7 +76,7 @@ public class F16Tests
       .ToList();
     Assert.Equal(waypoints.Count * 3, waypointEnters.Count);
     Assert.Equal(waypointEnters.Where((_, index) => index % 3 == 2), sequence.WaypointEnteredAfter);
-    Assert.True(sequence.WaypointEnteredAfter[^1] < sequence.Presses.Count);
+    Assert.True(sequence.WaypointEnteredAfter[^1] < sequence.Steps.Count);
   }
 
   [Fact]
@@ -82,9 +84,19 @@ public class F16Tests
   {
     var waypoints = TheWayFixture.Load("F16.json").Waypoints!.Select(w => w.ToCockpitWaypoint()).ToList();
 
-    var baseDelays = F16.CreateTransfer(waypoints, 1).Presses.Select(p => p.Delay);
-    var delayed = F16.CreateTransfer(waypoints, 1, extraDelay: 50).Presses.Select(p => p.Delay);
+    var baseDelays = Presses(F16.CreateTransfer(waypoints, 1)).Select(p => p.Delay);
+    var delayed = Presses(F16.CreateTransfer(waypoints, 1, extraDelay: 50)).Select(p => p.Delay);
 
     Assert.Equal(baseDelays.Select(d => d + 50), delayed);
+  }
+
+  [Fact]
+  public void OnlyPressesButtonsWithoutReadingTheCockpit()
+  {
+    var waypoints = TheWayFixture.Load("F16.json").Waypoints!.Select(w => w.ToCockpitWaypoint()).ToList();
+
+    var steps = F16.CreateTransfer(waypoints, 1).Steps;
+
+    Assert.All(steps, step => Assert.False(step.IsChecked));
   }
 }

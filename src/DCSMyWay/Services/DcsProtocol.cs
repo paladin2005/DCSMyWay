@@ -30,7 +30,7 @@ public static class DcsProtocol
 
     if (incoming?.Type == "cockpit")
     {
-      var cockpit = new CockpitState(incoming.Model, incoming.Steerpoint, incoming.Busy == true, incoming.TransferId, incoming.Done ?? 0);
+      var cockpit = new CockpitState(incoming.Model, incoming.Steerpoint, incoming.Busy == true, incoming.TransferId, incoming.Done ?? 0, incoming.Failed);
       message = new DcsMessage(DcsMessageType.Cockpit, null, cockpit);
       return true;
     }
@@ -51,13 +51,32 @@ public static class DcsProtocol
     return true;
   }
 
-  public static string CreateWaypointsCommand(int transferId, IEnumerable<ButtonPress> presses)
+  public static string CreateWaypointsCommand(int transferId, IEnumerable<CockpitStep> steps)
   {
-    var commands = presses
-      .Select(p => new ButtonPressCommand(p.Device, p.Code, p.Delay, p.Activate, p.AddDepress))
-      .ToList();
+    var commands = steps.Select(CreateStepCommand).ToList();
     return JsonSerializer.Serialize(new WaypointsCommand("waypoints", transferId, commands), DcsJsonContext.Default.WaypointsCommand);
   }
+
+  private static StepCommand CreateStepCommand(CockpitStep step) => new(
+    step.Press?.Device,
+    step.Press?.Code,
+    step.Press?.Delay,
+    step.Press?.Activate,
+    step.Press?.AddDepress,
+    CreateCheckCommands(step.Until),
+    CreateCheckCommands(step.Wait),
+    step.Select is { } select
+      ? new SelectCommand(select.Indicator, select.Element, select.Target, CreatePressCommand(select.Decrease))
+      : null,
+    step.IsChecked ? step.Tries : null,
+    step.IsChecked ? step.Timeout : null,
+    step.Failure);
+
+  private static PressCommand CreatePressCommand(ButtonPress press) =>
+    new(press.Device, press.Code, press.Delay, press.Activate, press.AddDepress);
+
+  private static List<CheckCommand>? CreateCheckCommands(IReadOnlyList<IndicationCheck>? checks) =>
+    checks?.Select(c => new CheckCommand(c.Indicator, c.Element, c.Pattern, c.Values?.ToList())).ToList();
 
   public static string CreateCancelCommand() =>
     JsonSerializer.Serialize(new CancelCommand("cancel"), DcsJsonContext.Default.CancelCommand);
@@ -86,11 +105,29 @@ internal sealed record IncomingMessage(
   long? AircraftId,
   int? Steerpoint,
   int? TransferId,
-  int? Done);
+  int? Done,
+  string? Failed);
 
-internal sealed record WaypointsCommand(string Type, int Id, List<ButtonPressCommand> Presses);
+internal sealed record WaypointsCommand(string Type, int Id, List<StepCommand> Steps);
 
-internal sealed record ButtonPressCommand(int Device, int Code, int Delay, double Activate, bool Depress);
+internal sealed record StepCommand(
+  int? Device,
+  int? Code,
+  int? Delay,
+  double? Activate,
+  bool? Depress,
+  List<CheckCommand>? Until,
+  List<CheckCommand>? Wait,
+  SelectCommand? Select,
+  int? Tries,
+  int? Timeout,
+  string? Failure);
+
+internal sealed record PressCommand(int Device, int Code, int Delay, double Activate, bool Depress);
+
+internal sealed record CheckCommand(int Indicator, string Element, string? Pattern, List<string>? Values);
+
+internal sealed record SelectCommand(int Indicator, string Element, int Target, PressCommand Down);
 
 internal sealed record CancelCommand(string Type);
 

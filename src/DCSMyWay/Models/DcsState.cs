@@ -7,4 +7,5 @@ public sealed record DcsState(
   long? AircraftId,
   int? ActiveSteerpoint,
   int? TransferId,
-  int PressesDone);
+  int PressesDone,
+  string? TransferFailure = null);
