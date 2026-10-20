@@ -5,6 +5,7 @@ namespace DCSMyWay.Interop;
 internal static class NativeMethods
 {
   public const int GwlExStyle = -20;
+  public const int GwlpHwndParent = -8;
   public const nint WsExNoActivate = 0x08000000;
   public const int WhKeyboardLl = 13;
   public const int WmKeyDown = 0x0100;

@@ -18,6 +18,15 @@
       <TitleBar.IconSource>
         <ImageIconSource ImageSource="Assets/AppIcon.ico" />
       </TitleBar.IconSource>
+      <TitleBar.RightHeader>
+        <Button
+          AutomationProperties.Name="Settings"
+          Click="SettingsButton_Click"
+          Style="{StaticResource SubtleButtonStyle}"
+          ToolTipService.ToolTip="Settings">
+          <FontIcon FontSize="14" Glyph="&#xE713;" />
+        </Button>
+      </TitleBar.RightHeader>
     </TitleBar>
 
     <Frame x:Name="RootFrame" Grid.Row="1" />
