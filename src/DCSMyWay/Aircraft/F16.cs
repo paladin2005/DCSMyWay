@@ -34,6 +34,16 @@ public static class F16
     "F-16C_50", "F-16D_50", "F-16D_50_NS", "F-16D_52", "F-16D_52_NS", "F-16D_Barak_30", "F-16D_Barak_40", "F-16I",
   ];
 
+  public static readonly SupportedAircraft Aircraft = new(
+    "F-16",
+    ModuleNames,
+    "steerpoint",
+    "STPT",
+    1,
+    99,
+    "Put the DED on its main page so DCSMyWay can read the active steerpoint",
+    (waypoints, start) => CreateTransfer(waypoints.Select(Format), start));
+
   public static CockpitWaypoint Format(Waypoint waypoint) => new(
     waypoint.Name,
     CoordinateFormat.LatitudeHemisphere(waypoint.Latitude),
@@ -84,6 +94,6 @@ public static class F16
     }
 
     presses.Add(new(Icp, ReturnSwitch, longDelay, -1));
-    return new TransferSequence(presses, waypointEnteredAfter);
+    return new TransferSequence([.. presses.Select(p => new CockpitStep(p))], waypointEnteredAfter);
   }
 }

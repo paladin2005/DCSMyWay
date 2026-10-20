@@ -1,3 +1,3 @@
 namespace DCSMyWay.Models;
 
-public sealed record TransferSequence(List<ButtonPress> Presses, List<int> WaypointEnteredAfter);
+public sealed record TransferSequence(List<CockpitStep> Steps, List<int> WaypointEnteredAfter);

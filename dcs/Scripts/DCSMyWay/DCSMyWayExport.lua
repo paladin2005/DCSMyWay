@@ -6,7 +6,7 @@ package.cpath = package.cpath .. ';' .. lfs.currentdir() .. '/LuaSocket/?.dll'
 local socket = require('socket')
 local JSON = loadfile(lfs.currentdir() .. '/Scripts/JSON.lua')()
 
-local VERSION = '0.7.0'
+local VERSION = '0.8.0'
 local HOST = '127.0.0.1'
 local APP_PORT = 42080
 local COMMAND_PORT = 42082
@@ -14,7 +14,11 @@ local STATE_INTERVAL = 0.1
 local STEERPOINT_INTERVAL = 0.5
 local BIND_RETRY_INTERVAL = 2
 local CLIENT_TIMEOUT = 5
-local DED_INDICATOR = 6
+local CHECK_INTERVAL = 0.05
+local STEERPOINT_SOURCES = {
+  { model = '^F%-16', indicators = { 6 }, elements = { 'Selected Steerpoint', 'STEERPOINT NUMBER', 'INS_SelectedSteerpoint' }, display = 'DED' },
+  { model = '^FA%-18', indicators = { 4, 2, 3 }, elements = { 'WYPT_Page_Number' } },
+}
 
 local udp
 local server
@@ -24,14 +28,20 @@ local clientBuffer = {}
 local clientSince = 0
 local nextStateAt = 0
 local nextSteerpointAt = 0
-local presses
-local pressIndex = 1
+local steps
+local stepIndex = 1
+local phase
 local pressed
 local releaseAt = 0
+local deadline = 0
+local nextCheckAt = 0
+local stepPresses = 0
+local selectedNumber
 local transferId
-local donePresses = 0
+local doneSteps = 0
+local failure
 local steerpoint
-local unknownDedLogged = false
+local unknownDisplayLogged = false
 local lastError
 
 local upstreamStart = LuaExportStart
@@ -81,21 +91,47 @@ local function parseIndication(text)
   return elements
 end
 
-local function readSteerpoint()
-  local read, text = pcall(list_indication, DED_INDICATOR)
+local function readIndication(indicator)
+  local read, text = pcall(list_indication, indicator)
   if not read then
-    report('Cannot read the DED: ' .. tostring(text))
+    report('Cannot read indicator ' .. indicator .. ': ' .. tostring(text))
     return nil
   end
   if type(text) ~= 'string' then return nil end
-  local elements = parseIndication(text)
-  local number = elements['Selected Steerpoint'] or elements['STEERPOINT NUMBER']
-  local current = number and tonumber(number:match('%d+'))
-  if not current and text ~= '' and not unknownDedLogged then
-    unknownDedLogged = true
-    info('DED page without steerpoint: ' .. text:gsub('\n', ' | '):sub(1, 400))
+  return text
+end
+
+local function readElements(indicator)
+  local text = readIndication(indicator)
+  return text and parseIndication(text) or {}
+end
+
+local function readSourceSteerpoint(source, logUnknown)
+  for _, indicator in ipairs(source.indicators) do
+    local text = readIndication(indicator)
+    if text then
+      local elements = parseIndication(text)
+      for _, name in ipairs(source.elements) do
+        local current = elements[name] and tonumber(elements[name]:match('%d+'))
+        if current then return current end
+      end
+      if logUnknown and source.display and text ~= '' and not unknownDisplayLogged then
+        unknownDisplayLogged = true
+        info(source.display .. ' page without steerpoint: ' .. text:gsub('\n', ' | '):sub(1, 400))
+      end
+    end
   end
-  return current
+  return nil
+end
+
+local function readSteerpoint(model)
+  for _, source in ipairs(STEERPOINT_SOURCES) do
+    if model == nil or model:find(source.model) then
+      local current = readSourceSteerpoint(source, model ~= nil)
+      if current then return current end
+    end
+  end
+  return nil
 end
 
 local function aircraftModel()
@@ -106,7 +142,7 @@ end
 local function updateSteerpoint(now, model)
   if now < nextSteerpointAt then return end
   nextSteerpointAt = now + STEERPOINT_INTERVAL
-  local current = (model == nil or model:find('^F%-16')) and readSteerpoint() or nil
+  local current = readSteerpoint(model)
   if current == steerpoint then return end
   steerpoint = current
   info('Active steerpoint is now ' .. (steerpoint and tostring(steerpoint) or 'unknown'))
@@ -114,12 +150,13 @@ end
 
 local function stateMessage(model)
   return string.format(
-    '{"type":"cockpit","model":%s,"steerpoint":%s,"busy":%s,"transferId":%s,"done":%d}',
+    '{"type":"cockpit","model":%s,"steerpoint":%s,"busy":%s,"transferId":%s,"done":%d,"failed":%s}',
     model and jsonString(model) or 'null',
     steerpoint and string.format('%d', steerpoint) or 'null',
-    tostring(presses ~= nil),
+    tostring(steps ~= nil),
     transferId and string.format('%d', transferId) or 'null',
-    donePresses)
+    doneSteps,
+    failure and jsonString(failure) or 'null')
 end
 
 local function send(message)
@@ -161,52 +198,160 @@ local function closeSockets()
   nextBindAt = 0
 end
 
-local function stopPresses()
-  presses = nil
-  pressIndex = 1
+local function stopSteps()
+  steps = nil
+  stepIndex = 1
+  phase = nil
   pressed = nil
 end
 
-local function startPresses(list, id)
-  if presses then
+local function startSteps(list, id)
+  if steps then
     report('Ignoring waypoints while the previous ones are being entered')
     return
   end
   if type(list) ~= 'table' or #list == 0 then return end
-  presses = list
-  pressIndex = 1
+  steps = list
+  stepIndex = 1
+  phase = nil
   pressed = nil
   transferId = type(id) == 'number' and id or nil
-  donePresses = 0
-  info('Entering ' .. #list .. ' button presses')
+  doneSteps = 0
+  failure = nil
+  info('Entering waypoints in ' .. #list .. ' steps')
 end
 
-local function cancelPresses()
-  if not presses then return end
+local function release()
   if pressed and pressed.depress then GetDevice(pressed.device):performClickableAction(pressed.code, 0) end
-  info(string.format('Waypoint entry cancelled after %d of %d button presses', pressIndex - 1, #presses))
-  stopPresses()
+  pressed = nil
 end
 
-local function stepPresses(now)
-  if not presses then return end
-  if pressed then
-    if now < releaseAt then return end
-    if pressed.depress then GetDevice(pressed.device):performClickableAction(pressed.code, 0) end
-    pressed = nil
-    pressIndex = pressIndex + 1
-    donePresses = pressIndex - 1
-    return
+local function cancelSteps()
+  if not steps then return end
+  release()
+  info(string.format('Waypoint entry cancelled after %d of %d steps', stepIndex - 1, #steps))
+  stopSteps()
+end
+
+local function checkHolds(check, displays)
+  local elements = displays[check.indicator]
+  if not elements then
+    elements = readElements(check.indicator)
+    displays[check.indicator] = elements
   end
-  local press = presses[pressIndex]
-  if not press then
+  for name, value in pairs(elements) do
+    if name:find(check.element) then
+      if check.values then
+        for _, expected in ipairs(check.values) do
+          if value == expected then return true end
+        end
+      elseif not check.pattern or value:find(check.pattern) then
+        return true
+      end
+    end
+  end
+  return false
+end
+
+local function anyHolds(checks)
+  local displays = {}
+  for _, check in ipairs(checks) do
+    if checkHolds(check, displays) then return true end
+  end
+  return false
+end
+
+local function readNumber(selection)
+  for name, value in pairs(readElements(selection.indicator)) do
+    if name:find(selection.element) then return tonumber(value:match('%d+')) end
+  end
+  return nil
+end
+
+local function describeChecks(step)
+  local checks = step['until'] or step.wait or { step.select }
+  local parts = {}
+  for _, check in ipairs(checks) do
+    local found = false
+    for name, value in pairs(readElements(check.indicator)) do
+      if name:find(check.element) then
+        table.insert(parts, name .. ' = ' .. value)
+        found = true
+      end
+    end
+    if not found then table.insert(parts, check.element .. ' not shown') end
+  end
+  return table.concat(parts, ', ')
+end
+
+local function finishStep()
+  stepIndex = stepIndex + 1
+  doneSteps = stepIndex - 1
+  phase = nil
+end
+
+local function failStep(step)
+  failure = step.failure or ('Step ' .. stepIndex .. ' did not complete')
+  report(string.format('Waypoint entry stopped at step %d of %d: %s (%s)', stepIndex, #steps, failure, describeChecks(step)))
+  release()
+  stopSteps()
+end
+
+local function pressButton(button, now)
+  GetDevice(button.device):performClickableAction(button.code, button.activate)
+  pressed = button
+  releaseAt = now + button.delay / 1000
+  stepPresses = stepPresses + 1
+  phase = 'holding'
+end
+
+local function selectNumber(step, now)
+  local number = readNumber(step.select)
+  if number == step.select.target then return finishStep() end
+  if number == nil or stepPresses >= (step.tries or 1) then return failStep(step) end
+  selectedNumber = number
+  pressButton(number < step.select.target and step or step.select.down, now)
+end
+
+local function startStep(step, now)
+  stepPresses = 0
+  if step.select then return selectNumber(step, now) end
+  if step['until'] and anyHolds(step['until']) then return finishStep() end
+  if step.device then return pressButton(step, now) end
+  if not step.wait then return finishStep() end
+  phase = 'waiting'
+  deadline = now + (step.timeout or 0) / 1000
+  nextCheckAt = now
+end
+
+local function stepTransfer(now)
+  if not steps then return end
+  local step = steps[stepIndex]
+  if not step then
     info('Waypoints entered')
-    stopPresses()
+    stopSteps()
     return
   end
-  GetDevice(press.device):performClickableAction(press.code, press.activate)
-  pressed = press
-  releaseAt = now + press.delay / 1000
+  if phase == nil then return startStep(step, now) end
+  if phase == 'holding' then
+    if now < releaseAt then return end
+    release()
+    if not (step.select or step['until'] or step.wait) then return finishStep() end
+    phase = 'waiting'
+    deadline = now + (step.timeout or 0) / 1000
+    nextCheckAt = now
+    return
+  end
+  if now < nextCheckAt then return end
+  nextCheckAt = now + CHECK_INTERVAL
+  if step.select then
+    if readNumber(step.select) ~= selectedNumber then return selectNumber(step, now) end
+  elseif anyHolds(step['until'] or step.wait) then
+    return finishStep()
+  end
+  if now < deadline then return end
+  if step['until'] and stepPresses < (step.tries or 1) then return pressButton(step, now) end
+  failStep(step)
 end
 
 local function handleCommand(line)
@@ -216,9 +361,9 @@ local function handleCommand(line)
     return
   end
   if command.type == 'waypoints' then
-    startPresses(command.presses, command.id)
+    startSteps(command.steps, command.id)
   elseif command.type == 'cancel' then
-    cancelPresses()
+    cancelSteps()
   else
     report('Unknown command: ' .. tostring(command.type))
   end
@@ -250,9 +395,10 @@ local function frame()
   openSockets(now)
   pollCommands(now)
 
-  local stepped, err = pcall(stepPresses, now)
+  local stepped, err = pcall(stepTransfer, now)
   if not stepped then
-    stopPresses()
+    stopSteps()
+    failure = 'DCSMyWay script error'
     report('Waypoint entry failed: ' .. tostring(err))
   end
 
@@ -278,7 +424,7 @@ end
 function LuaExportStop()
   callUpstream(upstreamStop, 'stop')
   local stopped, err = pcall(function()
-    stopPresses()
+    stopSteps()
     closeSockets()
   end)
   if not stopped then report(err) end

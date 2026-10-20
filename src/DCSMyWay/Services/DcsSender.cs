@@ -12,8 +12,8 @@ public sealed class DcsSender(int hookPort, int cockpitPort)
 
   private static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds(2);
 
-  public Task<bool> SendWaypointsAsync(int transferId, IEnumerable<ButtonPress> presses) =>
-    SendAsync(cockpitPort, DcsProtocol.CreateWaypointsCommand(transferId, presses));
+  public Task<bool> SendWaypointsAsync(int transferId, IEnumerable<CockpitStep> steps) =>
+    SendAsync(cockpitPort, DcsProtocol.CreateWaypointsCommand(transferId, steps));
 
   public Task<bool> CancelWaypointsAsync() =>
     SendAsync(cockpitPort, DcsProtocol.CreateCancelCommand());

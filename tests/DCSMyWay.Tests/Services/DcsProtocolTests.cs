@@ -68,14 +68,46 @@ public class DcsProtocolTests
   }
 
   [Fact]
-  public void SerializesWaypointsInTheFormatTheDcsScriptExpects()
+  public void ParsesTheFailureOfTheLastTransfer()
   {
-    ButtonPress[] presses = [new(17, 3032, 150, -1), new(20, 3026, 100, 0.2, AddDepress: false)];
+    var json = """{"type":"cockpit","model":"FA-18C_hornet","steerpoint":4,"busy":false,"transferId":3,"done":17,"failed":"PRECISE did not turn on"}""";
 
-    var command = DcsProtocol.CreateWaypointsCommand(7, presses);
+    var parsed = DcsProtocol.TryParseMessage(Encoding.UTF8.GetBytes(json), out var message);
+
+    Assert.True(parsed);
+    Assert.Equal(new CockpitState("FA-18C_hornet", 4, false, 3, 17, "PRECISE did not turn on"), message!.Cockpit);
+  }
+
+  [Fact]
+  public void SerializesPlainButtonPressesInTheFormatTheDcsScriptExpects()
+  {
+    CockpitStep[] steps = [new(new(17, 3032, 150, -1)), new(new(20, 3026, 100, 0.2, AddDepress: false))];
+
+    var command = DcsProtocol.CreateWaypointsCommand(7, steps);
 
     Assert.Equal(
-      """{"type":"waypoints","id":7,"presses":[{"device":17,"code":3032,"delay":150,"activate":-1,"depress":true},{"device":20,"code":3026,"delay":100,"activate":0.2,"depress":false}]}""",
+      """{"type":"waypoints","id":7,"steps":[{"device":17,"code":3032,"delay":150,"activate":-1,"depress":true},{"device":20,"code":3026,"delay":100,"activate":0.2,"depress":false}]}""",
+      command);
+  }
+
+  [Fact]
+  public void SerializesStepsThatReadTheCockpitDisplays()
+  {
+    CockpitStep[] steps =
+    [
+      new(new(37, 3028, 100)) { Until = [new(4, "^Menu_SUPT$"), new(4, "^AC_Latitude$", "%.%d+'$")], Tries = 3, Timeout = 1000, Failure = "No menu" },
+      new(null) { Wait = [new(4, "^WYPT_Latitude$", Values: ["N 42°14.6479'"])], Timeout = 3000, Failure = "Wrong latitude" },
+      new(new(37, 3022, 100)) { Select = new(4, "^WYPT_Number$", 5, new(37, 3023, 100)), Tries = 60, Timeout = 1000 },
+    ];
+
+    var command = DcsProtocol.CreateWaypointsCommand(2, steps);
+
+    Assert.Equal(
+      """{"type":"waypoints","id":2,"steps":[""" +
+      """{"device":37,"code":3028,"delay":100,"activate":1,"depress":true,"until":[{"indicator":4,"element":"^Menu_SUPT$"},{"indicator":4,"element":"^AC_Latitude$","pattern":"%.%d\u002B\u0027$"}],"tries":3,"timeout":1000,"failure":"No menu"},""" +
+      """{"wait":[{"indicator":4,"element":"^WYPT_Latitude$","values":["N 42\u00B014.6479\u0027"]}],"tries":1,"timeout":3000,"failure":"Wrong latitude"},""" +
+      """{"device":37,"code":3022,"delay":100,"activate":1,"depress":true,"select":{"indicator":4,"element":"^WYPT_Number$","target":5,"down":{"device":37,"code":3023,"delay":100,"activate":1,"depress":true}},"tries":60,"timeout":1000}""" +
+      """]}""",
       command);
   }
 

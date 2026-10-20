@@ -23,6 +23,8 @@ public sealed partial class MainPage : Page
   private bool _transferStarted;
   private int _nextWaypointId = 1;
   private int _nextTransferId = 1;
+  private int? _sentTransferId;
+  private int? _failureShownTransferId;
   private int _nextWaypointNumber = 1;
   private bool _wasConnected;
 
@@ -77,6 +79,7 @@ public sealed partial class MainPage : Page
     CrosshairButton.IsEnabled = state is not null;
     if (DateTimeOffset.UtcNow - _crosshairClickedUtc > DcsSyncDelay) CrosshairButton.IsChecked = state?.CrosshairVisible == true;
     UpdateTransferProgress(state);
+    ShowTransferFailure(state);
     var cancelling = IsTransferInProgress || state?.IsEnteringWaypoints == true;
     ShowTransferButton(cancelling);
     TransferButton.IsEnabled = state is not null
@@ -105,7 +108,8 @@ public sealed partial class MainPage : Page
     AircraftChip.Visibility = state is null ? Visibility.Collapsed : Visibility.Visible;
     AircraftText.Text = state?.Position.Module ?? "";
     SteerpointChip.Visibility = state?.ActiveSteerpoint is null ? Visibility.Collapsed : Visibility.Visible;
-    SteerpointText.Text = state?.ActiveSteerpoint is { } number ? $"STPT {number}" : "";
+    var label = SupportedAircraft.Find(state?.Position.Module)?.SteerpointLabel ?? "STPT";
+    SteerpointText.Text = state?.ActiveSteerpoint is { } number ? $"{label} {number}" : "";
   }
 
   private void UpdateTransferProgress(DcsState? state)
@@ -120,6 +124,14 @@ public sealed partial class MainPage : Page
     if (!_transferStarted && DateTimeOffset.UtcNow - _transferClickedUtc < TransferStartTimeout) return;
     if (MessageBar.Message == _transferMessage) MessageBar.IsOpen = false;
     _transferMessage = null;
+  }
+
+  private void ShowTransferFailure(DcsState? state)
+  {
+    if (state?.TransferFailure is not { } failure || state.TransferId != _sentTransferId || _sentTransferId == _failureShownTransferId) return;
+    _failureShownTransferId = _sentTransferId;
+    _transferMessage = null;
+    ShowMessage(InfoBarSeverity.Error, $"Transfer stopped: {failure}. Waypoints with a checkmark were entered");
   }
 
   private void RefreshTransferMarks(long? aircraftId)
@@ -160,9 +172,11 @@ public sealed partial class MainPage : Page
       return;
     }
 
-    if (state is null || !F16.ModuleNames.Contains(state.Position.Module))
+    var aircraft = SupportedAircraft.Find(state?.Position.Module);
+    if (state is null || aircraft is null)
     {
-      ShowMessage(InfoBarSeverity.Warning, $"Only the F-16 is supported for now ({state?.Position.Module ?? "no aircraft"})");
+      var supported = string.Join(" and ", SupportedAircraft.All.Select(a => a.Name));
+      ShowMessage(InfoBarSeverity.Warning, $"Only the {supported} are supported for now ({state?.Position.Module ?? "no aircraft"})");
       return;
     }
 
@@ -174,11 +188,11 @@ public sealed partial class MainPage : Page
 
     var waypoints = Waypoints;
     var pending = _transferHistory.Pending(state.AircraftId, waypoints);
+    var again = pending.Waypoints.Count == 0;
     int start;
-    if (pending.Waypoints.Count == 0)
+    if (again)
     {
-      start = _transferHistory.SteerpointOf(state.AircraftId, waypoints[0]) ?? 1;
-      if (!await ConfirmTransferAgainAsync(start)) return;
+      start = _transferHistory.SteerpointOf(state.AircraftId, waypoints[0]) ?? aircraft.FirstSteerpoint;
       pending = new PendingTransfer(waypoints, start);
     }
     else if (pending.StartSteerpoint is { } next)
@@ -187,22 +201,30 @@ public sealed partial class MainPage : Page
     }
     else if (state.ActiveSteerpoint is { } active)
     {
-      start = App.Settings.Current.StartAtActiveSteerpoint ? active : active + 1;
+      start = Math.Max(App.Settings.Current.StartAtActiveSteerpoint ? active : active + 1, aircraft.FirstSteerpoint);
     }
     else
     {
-      ShowMessage(InfoBarSeverity.Warning, "Put the DED on its main page so DCSMyWay can read the active steerpoint");
+      ShowMessage(InfoBarSeverity.Warning, aircraft.SteerpointHint);
       return;
     }
 
+    if (start + pending.Waypoints.Count - 1 > aircraft.LastSteerpoint)
+    {
+      ShowMessage(InfoBarSeverity.Warning, $"These waypoints don't fit: the {aircraft.Name} has {aircraft.SteerpointName}s up to {aircraft.LastSteerpoint}");
+      return;
+    }
+
+    if (again && !await ConfirmTransferAgainAsync(aircraft, start)) return;
     _transferClickedUtc = DateTimeOffset.UtcNow;
     TransferButton.IsEnabled = false;
-    var sequence = F16.CreateTransfer(pending.Waypoints.Select(F16.Format), start);
+    var sequence = aircraft.CreateTransfer(pending.Waypoints, start);
     var transferId = _nextTransferId++;
-    if (await App.DcsSender.SendWaypointsAsync(transferId, sequence.Presses))
+    if (await App.DcsSender.SendWaypointsAsync(transferId, sequence.Steps))
     {
+      _sentTransferId = transferId;
       _transferHistory.Record(state.AircraftId, transferId, pending.Waypoints, start, sequence.WaypointEnteredAfter);
-      _transferMessage = $"Entering {pending.Waypoints.Count} waypoints from steerpoint {start}, don't touch the cockpit controls";
+      _transferMessage = $"Entering {pending.Waypoints.Count} waypoints from {aircraft.SteerpointName} {start}, don't touch the cockpit controls";
       _transferStarted = false;
       ShowMessage(InfoBarSeverity.Informational, _transferMessage);
       await App.DcsSender.SetCrosshairVisibleAsync(false);
@@ -213,11 +235,11 @@ public sealed partial class MainPage : Page
     ShowMessage(InfoBarSeverity.Error, "DCS is not reachable");
   }
 
-  private async Task<bool> ConfirmTransferAgainAsync(int start)
+  private async Task<bool> ConfirmTransferAgainAsync(SupportedAircraft aircraft, int start)
   {
     _transferClickedUtc = DateTimeOffset.UtcNow;
     TransferButton.IsEnabled = false;
-    RepeatTransferText.Text = $"All these waypoints are already in this aircraft. They will be entered again starting at steerpoint {start}.";
+    RepeatTransferText.Text = $"All these waypoints are already in this aircraft. They will be entered again starting at {aircraft.SteerpointName} {start}.";
     if (await RepeatTransferDialog.ShowAsync() == ContentDialogResult.Primary) return true;
     _transferClickedUtc = default;
     Refresh();
