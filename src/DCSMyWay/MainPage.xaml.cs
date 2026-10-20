@@ -166,6 +166,12 @@ public sealed partial class MainPage : Page
       return;
     }
 
+    if (!App.DcsListener.IsCockpitConnected)
+    {
+      ShowMessage(InfoBarSeverity.Warning, @"The DCSMyWay export script is not running. Check its line in Saved Games\DCS\Scripts\Export.lua");
+      return;
+    }
+
     var waypoints = Waypoints;
     var pending = _transferHistory.Pending(state.AircraftId, waypoints);
     int start;
@@ -199,6 +205,7 @@ public sealed partial class MainPage : Page
       _transferMessage = $"Entering {pending.Waypoints.Count} waypoints from steerpoint {start}, don't touch the cockpit controls";
       _transferStarted = false;
       ShowMessage(InfoBarSeverity.Informational, _transferMessage);
+      await App.DcsSender.SetCrosshairVisibleAsync(false);
       return;
     }
 

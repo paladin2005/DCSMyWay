@@ -8,9 +8,10 @@ public enum DcsMessageType
 {
   Camera,
   Mark,
+  Cockpit,
 }
 
-public sealed record DcsMessage(DcsMessageType Type, DcsState State);
+public sealed record DcsMessage(DcsMessageType Type, CameraState? Camera, CockpitState? Cockpit);
 
 public static class DcsProtocol
 {
@@ -27,28 +28,26 @@ public static class DcsProtocol
       return false;
     }
 
-    if (incoming?.Model is null) return false;
-    if (incoming.Lat is not { } latitude || !double.IsFinite(latitude)) return false;
-    if (incoming.Lon is not { } longitude || !double.IsFinite(longitude)) return false;
-    if (incoming.Elev is not { } elevation || !double.IsFinite(elevation)) return false;
-    DcsMessageType? type = incoming.Type switch
+    if (incoming?.Type == "cockpit")
+    {
+      var cockpit = new CockpitState(incoming.Model, incoming.Steerpoint, incoming.Busy == true, incoming.TransferId, incoming.Done ?? 0);
+      message = new DcsMessage(DcsMessageType.Cockpit, null, cockpit);
+      return true;
+    }
+
+    DcsMessageType? type = incoming?.Type switch
     {
       "camera" => DcsMessageType.Camera,
       "mark" => DcsMessageType.Mark,
       _ => null,
     };
-    if (type is null) return false;
+    if (type is null || incoming?.Model is null) return false;
+    if (incoming.Lat is not { } latitude || !double.IsFinite(latitude)) return false;
+    if (incoming.Lon is not { } longitude || !double.IsFinite(longitude)) return false;
+    if (incoming.Elev is not { } elevation || !double.IsFinite(elevation)) return false;
 
     var position = new DcsPosition(incoming.Model, latitude, longitude, elevation);
-    var state = new DcsState(
-      position,
-      incoming.Crosshair == true,
-      incoming.Busy == true,
-      incoming.AircraftId,
-      incoming.Steerpoint,
-      incoming.TransferId,
-      incoming.Done ?? 0);
-    message = new DcsMessage(type.Value, state);
+    message = new DcsMessage(type.Value, new CameraState(position, incoming.Crosshair == true, incoming.AircraftId), null);
     return true;
   }
 
