@@ -1,0 +1,95 @@
+dialog = {
+  ["type"] = "Window",
+  ["params"] = {
+    ["bounds"] = {
+      [1] = {
+        ["x"] = 0,
+        ["y"] = 0,
+        ["w"] = 360,
+        ["h"] = 280,
+      },
+    },
+    ["draggable"] = false,
+    ["enabled"] = true,
+    ["hasCursor"] = false,
+    ["lockFlow"] = false,
+    ["modal"] = false,
+    ["offscreen"] = false,
+    ["resizable"] = false,
+    ["zOrder"] = 111,
+    ["text"] = "",
+  },
+  ["skin"] = {
+    ["params"] = {
+      ["headerHeight"] = 0,
+      ["name"] = "windowSkin",
+    },
+    ["states"] = {
+      ["released"] = {
+        [1] = {
+          ["bkg"] = {
+            ["center_center"] = "0x00000000",
+          },
+        },
+      },
+    },
+  },
+  ["children"] = {
+    ["Status"] = {
+      ["type"] = "Static",
+      ["params"] = {
+        ["bounds"] = {
+          ["x"] = 0,
+          ["y"] = 0,
+          ["w"] = 360,
+          ["h"] = 28,
+        },
+        ["enabled"] = true,
+        ["visible"] = true,
+        ["text"] = "",
+      },
+      ["skin"] = {
+        ["params"] = {
+          ["name"] = "staticSkin",
+        },
+        ["states"] = {
+          ["released"] = {
+            [1] = {
+              ["text"] = {
+                ["blur"] = 1,
+                ["blurColor"] = "0x000000ff",
+                ["color"] = "0xffffffff",
+                ["font"] = "DejaVuLGCSansCondensed-Bold.ttf",
+                ["fontSize"] = 18,
+                ["horzAlign"] = {
+                  ["type"] = "middle",
+                },
+                ["vertAlign"] = {
+                  ["type"] = "middle",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    ["Crosshair"] = {
+      ["type"] = "Static",
+      ["params"] = {
+        ["bounds"] = {
+          ["x"] = 144,
+          ["y"] = 104,
+          ["w"] = 73,
+          ["h"] = 73,
+        },
+        ["enabled"] = true,
+        ["visible"] = true,
+      },
+      ["skin"] = {
+        ["params"] = {
+          ["name"] = "staticSkin",
+        },
+      },
+    },
+  },
+}

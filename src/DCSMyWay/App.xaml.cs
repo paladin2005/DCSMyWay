@@ -15,11 +15,16 @@ public partial class App : Application
 
   public static SettingsService Settings { get; } = new(SettingsService.DefaultPath);
 
+  public static DcsListener DcsListener { get; } = new(DcsListener.DefaultPort);
+
+  public static DcsSender DcsSender { get; } = new(DcsSender.DefaultPort);
+
   public static MainWindow MainWindow { get; private set; } = null!;
 
   protected override async void OnLaunched(LaunchActivatedEventArgs args)
   {
     await Settings.LoadAsync();
+    DcsListener.TryStart();
     MainWindow = new MainWindow();
     MainWindow.Closed += (_, _) => Exit();
     MainWindow.Activate();

@@ -40,7 +40,7 @@ public static class F16
     CoordinateFormat.ToDegreesMinutes(waypoint.Longitude, 3, 3),
     CoordinateFormat.ToFeet(waypoint.ElevationMeters));
 
-  public static List<ButtonPress> CreateButtonPresses(IEnumerable<CockpitWaypoint> waypoints, int extraDelay = 0)
+  public static List<ButtonPress> CreateButtonPresses(IEnumerable<CockpitWaypoint> waypoints, bool startAtActiveSteerpoint = true, int extraDelay = 0)
   {
     var shortDelay = ShortDelay + extraDelay;
     var longDelay = LongDelay + extraDelay;
@@ -58,9 +58,11 @@ public static class F16
       }
     }
 
+    var isFirst = true;
     foreach (var waypoint in waypoints)
     {
-      presses.Add(new(Icp, SteerpointIncrement, longDelay));
+      if (!isFirst || !startAtActiveSteerpoint) presses.Add(new(Icp, SteerpointIncrement, longDelay));
+      isFirst = false;
       presses.Add(new(Icp, DobberDown, longDelay, -1));
       presses.Add(new(Icp, DobberDown, longDelay, -1));
       TypeDigits(waypoint.LatitudeHemisphere == 'N' ? "2" : "8");
