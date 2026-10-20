@@ -5,4 +5,6 @@ public sealed record DcsState(
   bool CrosshairVisible,
   bool IsEnteringWaypoints,
   long? AircraftId,
-  int? ActiveSteerpoint);
+  int? ActiveSteerpoint,
+  int? TransferId,
+  int PressesDone);

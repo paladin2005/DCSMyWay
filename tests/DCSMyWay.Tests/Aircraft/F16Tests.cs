@@ -6,14 +6,34 @@ namespace DCSMyWay.Tests.Aircraft;
 
 public class F16Tests
 {
+  private static readonly ButtonPress Return = new(17, 3032, 150, -1);
+  private static readonly ButtonPress SteerpointPage = new(17, 3006, 150);
+  private static readonly ButtonPress Enter = new(17, 3016, 10);
+  private static readonly ButtonPress Digit1 = new(17, 3003, 10);
+  private static readonly ButtonPress Digit2 = new(17, 3004, 10);
+  private static readonly ButtonPress Digit3 = new(17, 3005, 10);
+
+  private static List<ButtonPress> TheWayWaypointPresses(TheWayFixture fixture) =>
+    [.. fixture.Buttons.Select(b => b.ToButtonPress()).Skip(3)];
+
   [Fact]
-  public void CreatesTheSameButtonPressesAsTheWayWhenStartingAtTheNextSteerpoint()
+  public void SelectsTheStartSteerpointAndThenEntersWaypointsLikeTheWay()
   {
     var fixture = TheWayFixture.Load("F16.json");
 
-    var presses = F16.CreateButtonPresses(fixture.Waypoints!.Select(w => w.ToCockpitWaypoint()), startAtActiveSteerpoint: false);
+    var sequence = F16.CreateTransfer(fixture.Waypoints!.Select(w => w.ToCockpitWaypoint()), 3);
 
-    Assert.Equal(fixture.Buttons.Select(b => b.ToButtonPress()), presses);
+    Assert.Equal([Return, Return, Return, SteerpointPage, Digit3, Enter, .. TheWayWaypointPresses(fixture)], sequence.Presses);
+  }
+
+  [Fact]
+  public void CreatesTheSameWaypointPressesAsTheWayFromDcsCoordinates()
+  {
+    var fixture = TheWayFixture.Load("F16EndToEnd.json");
+
+    var sequence = F16.CreateTransfer(fixture.Raw!.Select(w => F16.Format(w.ToWaypoint())), 12);
+
+    Assert.Equal([Return, Return, Return, SteerpointPage, Digit1, Digit2, Enter, .. TheWayWaypointPresses(fixture)], sequence.Presses);
   }
 
   [Fact]
@@ -27,28 +47,34 @@ public class F16Tests
   }
 
   [Fact]
-  public void CreatesTheSameButtonPressesAsTheWayFromDcsCoordinates()
+  public void FirstWaypointGoesToTheSelectedSteerpointAndTheRestFollowIt()
   {
-    var fixture = TheWayFixture.Load("F16EndToEnd.json");
+    var waypoints = TheWayFixture.Load("F16.json").Waypoints!.Select(w => w.ToCockpitWaypoint()).ToList();
 
-    var presses = F16.CreateButtonPresses(fixture.Raw!.Select(w => F16.Format(w.ToWaypoint())), startAtActiveSteerpoint: false);
+    var presses = F16.CreateTransfer(waypoints, 1).Presses;
 
-    Assert.Equal(fixture.Buttons.Select(b => b.ToButtonPress()), presses);
+    Assert.Equal(waypoints.Count - 1, presses.Count(p => p.Code == 3030));
+    Assert.NotEqual(3030, presses[6].Code);
   }
 
-  [Fact]
-  public void StartsAtTheActiveSteerpointByDefault()
+  [Theory]
+  [InlineData(1)]
+  [InlineData(24)]
+  public void MarksEachWaypointAsEnteredRightAfterItsElevationEnter(int startSteerpoint)
   {
-    var fixture = TheWayFixture.Load("F16.json");
-    var waypoints = fixture.Waypoints!.Select(w => w.ToCockpitWaypoint()).ToList();
-    var theWay = fixture.Buttons.Select(b => b.ToButtonPress()).ToList();
+    var waypoints = TheWayFixture.Load("F16.json").Waypoints!.Select(w => w.ToCockpitWaypoint()).ToList();
 
-    var presses = F16.CreateButtonPresses(waypoints);
+    var sequence = F16.CreateTransfer(waypoints, startSteerpoint);
 
-    Assert.Equal(new ButtonPress(17, 3030, 150), theWay[2]);
-    theWay.RemoveAt(2);
-    Assert.Equal(theWay, presses);
-    Assert.Equal(waypoints.Count - 1, presses.Count(p => p.Code == 3030));
+    var waypointEnters = sequence.Presses
+      .Select((press, index) => (press, index))
+      .Where(p => p.press == Enter)
+      .Skip(1)
+      .Select(p => p.index + 1)
+      .ToList();
+    Assert.Equal(waypoints.Count * 3, waypointEnters.Count);
+    Assert.Equal(waypointEnters.Where((_, index) => index % 3 == 2), sequence.WaypointEnteredAfter);
+    Assert.True(sequence.WaypointEnteredAfter[^1] < sequence.Presses.Count);
   }
 
   [Fact]
@@ -56,8 +82,8 @@ public class F16Tests
   {
     var waypoints = TheWayFixture.Load("F16.json").Waypoints!.Select(w => w.ToCockpitWaypoint()).ToList();
 
-    var baseDelays = F16.CreateButtonPresses(waypoints).Select(p => p.Delay);
-    var delayed = F16.CreateButtonPresses(waypoints, extraDelay: 50).Select(p => p.Delay);
+    var baseDelays = F16.CreateTransfer(waypoints, 1).Presses.Select(p => p.Delay);
+    var delayed = F16.CreateTransfer(waypoints, 1, extraDelay: 50).Presses.Select(p => p.Delay);
 
     Assert.Equal(baseDelays.Select(d => d + 50), delayed);
   }

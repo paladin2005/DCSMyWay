@@ -19,7 +19,7 @@ public class DcsConnectionTests
     await dcs.SendAsync(Encoding.UTF8.GetBytes(message), new IPEndPoint(IPAddress.Loopback, listener.Port), TestContext.Current.CancellationToken);
     await WaitUntilAsync(() => listener.IsConnected);
 
-    Assert.Equal(new DcsState(new DcsPosition("F-16C_50", 41.9, 43.7, 1677.5), true, false, 16777472, null), listener.Latest);
+    Assert.Equal(new DcsState(new DcsPosition("F-16C_50", 41.9, 43.7, 1677.5), true, false, 16777472, null, null, 0), listener.Latest);
   }
 
   [Fact]
