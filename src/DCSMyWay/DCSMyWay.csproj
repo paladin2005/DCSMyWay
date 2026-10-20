@@ -20,7 +20,6 @@
 
   <ItemGroup>
     <Content Include="Assets\AppIcon.ico" CopyToPublishDirectory="PreserveNewest" />
-    <Content Include="Assets\Map\**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
