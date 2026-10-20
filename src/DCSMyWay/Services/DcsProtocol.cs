@@ -53,6 +53,9 @@ public static class DcsProtocol
     return JsonSerializer.Serialize(new WaypointsCommand("waypoints", commands), DcsJsonContext.Default.WaypointsCommand);
   }
 
+  public static string CreateCancelCommand() =>
+    JsonSerializer.Serialize(new CancelCommand("cancel"), DcsJsonContext.Default.CancelCommand);
+
   public static string CreateCrosshairCommand(bool visible) =>
     JsonSerializer.Serialize(new CrosshairCommand("crosshair", visible), DcsJsonContext.Default.CrosshairCommand);
 
@@ -80,6 +83,8 @@ internal sealed record IncomingMessage(
 internal sealed record WaypointsCommand(string Type, List<ButtonPressCommand> Presses);
 
 internal sealed record ButtonPressCommand(int Device, int Code, int Delay, double Activate, bool Depress);
+
+internal sealed record CancelCommand(string Type);
 
 internal sealed record CrosshairCommand(string Type, bool Visible);
 

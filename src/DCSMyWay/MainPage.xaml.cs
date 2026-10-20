@@ -4,6 +4,7 @@ using DCSMyWay.Models;
 using DCSMyWay.Services;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 
 namespace DCSMyWay;
@@ -74,12 +75,23 @@ public sealed partial class MainPage : Page
     ShowDcsState(state);
     CrosshairButton.IsEnabled = state is not null;
     if (DateTimeOffset.UtcNow - _crosshairClickedUtc > DcsSyncDelay) CrosshairButton.IsChecked = state?.CrosshairVisible == true;
-    TransferButton.IsEnabled = _items.Count > 0
-      && state is { IsEnteringWaypoints: false }
+    UpdateTransferProgress(state);
+    var cancelling = IsTransferInProgress || state?.IsEnteringWaypoints == true;
+    ShowTransferButton(cancelling);
+    TransferButton.IsEnabled = state is not null
+      && (cancelling || _items.Count > 0)
       && DateTimeOffset.UtcNow - _transferClickedUtc > DcsSyncDelay;
     ClearButton.IsEnabled = _items.Count > 0;
-    UpdateTransferProgress(state);
     RefreshTransferMarks(state?.AircraftId);
+  }
+
+  private void ShowTransferButton(bool cancelling)
+  {
+    TransferText.Opacity = cancelling ? 0 : 1;
+    CancelTransferText.Opacity = cancelling ? 1 : 0;
+    AutomationProperties.SetName(TransferButton, cancelling ? CancelTransferText.Text : TransferText.Text);
+    var style = (Style)Application.Current.Resources[cancelling ? "DefaultButtonStyle" : "AccentButtonStyle"];
+    if (TransferButton.Style != style) TransferButton.Style = style;
   }
 
   private void ShowDcsState(DcsState? state)
@@ -110,12 +122,7 @@ public sealed partial class MainPage : Page
 
   private void RefreshTransferMarks(long? aircraftId)
   {
-    for (var i = 0; i < _items.Count; i++)
-    {
-      var item = _items[i];
-      var transferred = !IsTransferInProgress && _transferHistory.Contains(aircraftId, item.Waypoint);
-      if (item.IsTransferred != transferred) _items[i] = item with { IsTransferred = transferred };
-    }
+    foreach (var item in _items) item.IsTransferred = !IsTransferInProgress && _transferHistory.Contains(aircraftId, item.Waypoint);
   }
 
   private void OnMarkReceived(object? sender, DcsPosition position) =>
@@ -125,7 +132,7 @@ public sealed partial class MainPage : Page
   {
     var number = _nextWaypointNumber++;
     var waypoint = new Waypoint(_nextWaypointId++, $"W{number}", position.Latitude, position.Longitude, position.ElevationMeters);
-    var item = new WaypointItem(waypoint, false);
+    var item = new WaypointItem(waypoint);
     _items.Add(item);
     WaypointList.ScrollIntoView(item);
     Refresh();
@@ -145,6 +152,12 @@ public sealed partial class MainPage : Page
   private async void TransferButton_Click(object sender, RoutedEventArgs e)
   {
     var state = App.DcsListener.Latest;
+    if (IsTransferInProgress || state?.IsEnteringWaypoints == true)
+    {
+      await CancelTransferAsync();
+      return;
+    }
+
     if (state is null || !F16.ModuleNames.Contains(state.Position.Module))
     {
       ShowMessage(InfoBarSeverity.Warning, $"Only the F-16 is supported for now ({state?.Position.Module ?? "no aircraft"})");
@@ -174,6 +187,21 @@ public sealed partial class MainPage : Page
 
     _transferClickedUtc = default;
     ShowMessage(InfoBarSeverity.Error, "DCS is not reachable");
+  }
+
+  private async Task CancelTransferAsync()
+  {
+    _transferClickedUtc = DateTimeOffset.UtcNow;
+    TransferButton.IsEnabled = false;
+    if (!await App.DcsSender.CancelWaypointsAsync())
+    {
+      ShowMessage(InfoBarSeverity.Error, "DCS is not reachable");
+      return;
+    }
+
+    _transferHistory.Clear();
+    _transferMessage = null;
+    ShowMessage(InfoBarSeverity.Warning, "Transfer cancelled. The steerpoint being entered may be incomplete");
   }
 
   private async void DeleteWaypointButton_Click(object sender, RoutedEventArgs e)

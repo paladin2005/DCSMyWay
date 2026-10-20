@@ -1,3 +1,21 @@
+using System.ComponentModel;
+
 namespace DCSMyWay.Models;
 
-public sealed record WaypointItem(Waypoint Waypoint, bool IsTransferred);
+public sealed class WaypointItem(Waypoint waypoint) : INotifyPropertyChanged
+{
+  public event PropertyChangedEventHandler? PropertyChanged;
+
+  public Waypoint Waypoint { get; } = waypoint;
+
+  public bool IsTransferred
+  {
+    get;
+    set
+    {
+      if (field == value) return;
+      field = value;
+      PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsTransferred)));
+    }
+  }
+}

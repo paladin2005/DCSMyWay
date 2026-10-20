@@ -14,6 +14,9 @@ public sealed class DcsSender(int port)
   public Task<bool> SendWaypointsAsync(IEnumerable<ButtonPress> presses) =>
     SendAsync(DcsProtocol.CreateWaypointsCommand(presses));
 
+  public Task<bool> CancelWaypointsAsync() =>
+    SendAsync(DcsProtocol.CreateCancelCommand());
+
   public Task<bool> SetCrosshairVisibleAsync(bool visible) =>
     SendAsync(DcsProtocol.CreateCrosshairCommand(visible));
 
