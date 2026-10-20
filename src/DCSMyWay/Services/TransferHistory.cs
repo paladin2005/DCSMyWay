@@ -10,6 +10,9 @@ public sealed class TransferHistory
   public bool IsRepeat(long? aircraftId, IEnumerable<Waypoint> waypoints) =>
     _waypoints is not null && _aircraftId == aircraftId && _waypoints.SequenceEqual(waypoints);
 
+  public bool Contains(long? aircraftId, Waypoint waypoint) =>
+    _waypoints is not null && _aircraftId == aircraftId && _waypoints.Contains(waypoint);
+
   public void Record(long? aircraftId, IEnumerable<Waypoint> waypoints)
   {
     _aircraftId = aircraftId;

@@ -10,11 +10,13 @@ local DialogLoader = require('DialogLoader')
 local SkinUtils = require('SkinUtils')
 local Terrain = require('terrain')
 
-local VERSION = '0.3.0'
+local VERSION = '0.4.0'
 local HOST = '127.0.0.1'
 local APP_PORT = 42080
 local COMMAND_PORT = 42081
 local CAMERA_INTERVAL = 0.1
+local STEERPOINT_INTERVAL = 0.5
+local DED_INDICATOR = 6
 local BIND_RETRY_INTERVAL = 2
 local CLIENT_TIMEOUT = 5
 local STATUS_DURATION = 2.5
@@ -71,6 +73,9 @@ local mainViewLoaded = false
 local lastLayout
 local lastError
 local lastAircraftId
+local steerpoint
+local nextSteerpointAt = 0
+local unknownDedLogged = false
 
 local function info(message)
   log.write('DCSMYWAY', log.INFO, message)
@@ -124,9 +129,55 @@ local function readCamera()
   }
 end
 
+local function parseIndication(text)
+  local elements = {}
+  local name
+  local expectingName = false
+  for line in (text .. '\n'):gmatch('([^\n]*)\n') do
+    line = line:gsub('\r$', '')
+    if line:match('^%-%-%-%-%-+$') then
+      expectingName = true
+      name = nil
+    elseif expectingName then
+      name = line
+      expectingName = false
+    elseif name and elements[name] == nil then
+      elements[name] = line
+    end
+  end
+  return elements
+end
+
+local function readSteerpoint()
+  if not net.dostring_in then return nil end
+  local read, text = pcall(net.dostring_in, 'export', 'return list_indication(' .. DED_INDICATOR .. ')')
+  if not read then
+    report('Cannot read the DED: ' .. tostring(text))
+    return nil
+  end
+  if type(text) ~= 'string' then return nil end
+  local elements = parseIndication(text)
+  local number = elements['Selected Steerpoint'] or elements['STEERPOINT NUMBER']
+  local current = number and tonumber(number:match('%d+'))
+  if not current and text ~= '' and not unknownDedLogged then
+    unknownDedLogged = true
+    info('DED page without steerpoint: ' .. text:gsub('\n', ' | '):sub(1, 400))
+  end
+  return current
+end
+
+local function updateSteerpoint(now, model)
+  if now < nextSteerpointAt then return end
+  nextSteerpointAt = now + STEERPOINT_INTERVAL
+  local current = model:find('^F%-16') and readSteerpoint() or nil
+  if current == steerpoint then return end
+  steerpoint = current
+  info('Active steerpoint is now ' .. (steerpoint and tostring(steerpoint) or 'unknown'))
+end
+
 local function positionMessage(messageType, position)
   return string.format(
-    '{"type":"%s","model":%s,"lat":%.9f,"lon":%.9f,"elev":%.3f,"crosshair":%s,"busy":%s,"aircraftId":%s}',
+    '{"type":"%s","model":%s,"lat":%.9f,"lon":%.9f,"elev":%.3f,"crosshair":%s,"busy":%s,"aircraftId":%s,"steerpoint":%s}',
     messageType,
     jsonString(position.model),
     position.latitude,
@@ -134,7 +185,8 @@ local function positionMessage(messageType, position)
     position.elevation,
     tostring(crosshairVisible),
     tostring(presses ~= nil),
-    formatAircraftId(position.aircraftId) or 'null')
+    formatAircraftId(position.aircraftId) or 'null',
+    steerpoint and string.format('%d', steerpoint) or 'null')
 end
 
 local function send(message)
@@ -425,6 +477,7 @@ local function frame()
     nextCameraAt = now + CAMERA_INTERVAL
     local position = readCamera()
     if position then
+      updateSteerpoint(now, position.model)
       send(positionMessage('camera', position))
       if position.aircraftId ~= lastAircraftId then
         lastAircraftId = position.aircraftId
@@ -451,6 +504,9 @@ callbacks.onSimulationStop = guarded(function()
   markSentAt = nil
   routeMarks = {}
   lastAircraftId = nil
+  steerpoint = nil
+  nextSteerpointAt = 0
+  unknownDedLogged = false
   lastError = nil
 end)
 

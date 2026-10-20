@@ -11,22 +11,30 @@ namespace DCSMyWay;
 public sealed partial class MainPage : Page
 {
   private static readonly TimeSpan DcsSyncDelay = TimeSpan.FromSeconds(1);
+  private static readonly TimeSpan TransferStartTimeout = TimeSpan.FromSeconds(3);
 
-  private readonly ObservableCollection<Waypoint> _waypoints = [];
+  private readonly ObservableCollection<WaypointItem> _items = [];
   private readonly TransferHistory _transferHistory = new();
   private DispatcherQueueTimer? _refreshTimer;
   private DateTimeOffset _crosshairClickedUtc;
   private DateTimeOffset _transferClickedUtc;
+  private string? _transferMessage;
+  private bool _transferStarted;
+  private int _nextWaypointId = 1;
   private int _nextWaypointNumber = 1;
   private bool _wasConnected;
 
   public MainPage()
   {
     InitializeComponent();
-    WaypointList.ItemsSource = _waypoints;
+    WaypointList.ItemsSource = _items;
     Loaded += OnLoaded;
     Unloaded += OnUnloaded;
   }
+
+  private List<Waypoint> Waypoints => [.. _items.Select(i => i.Waypoint)];
+
+  private bool IsTransferInProgress => _transferMessage is not null;
 
   public static string Describe(double latitude, double longitude, double elevationMeters)
   {
@@ -57,19 +65,57 @@ public sealed partial class MainPage : Page
     var reconnected = connected && !_wasConnected;
     _wasConnected = connected;
     if (!connected) _transferHistory.Clear();
-    if (reconnected && _waypoints.Count > 0) await App.DcsSender.ShowRouteAsync(_waypoints);
+    if (reconnected && _items.Count > 0) await App.DcsSender.ShowRouteAsync(Waypoints);
   }
 
   private void Refresh()
   {
     var state = App.DcsListener.IsConnected ? App.DcsListener.Latest : null;
-    DcsStatusText.Text = GetDcsStatus(state);
+    ShowDcsState(state);
     CrosshairButton.IsEnabled = state is not null;
     if (DateTimeOffset.UtcNow - _crosshairClickedUtc > DcsSyncDelay) CrosshairButton.IsChecked = state?.CrosshairVisible == true;
-    TransferButton.IsEnabled = _waypoints.Count > 0
+    TransferButton.IsEnabled = _items.Count > 0
       && state is { IsEnteringWaypoints: false }
       && DateTimeOffset.UtcNow - _transferClickedUtc > DcsSyncDelay;
-    ClearButton.IsEnabled = _waypoints.Count > 0;
+    ClearButton.IsEnabled = _items.Count > 0;
+    UpdateTransferProgress(state);
+    RefreshTransferMarks(state?.AircraftId);
+  }
+
+  private void ShowDcsState(DcsState? state)
+  {
+    DcsStatusText.Text = App.DcsListener.IsListening
+      ? "No connection to DCS"
+      : $"Port {DcsListener.DefaultPort} is in use by another program. Close it and restart DCSMyWay.";
+    DcsStatusText.Visibility = state is null ? Visibility.Visible : Visibility.Collapsed;
+    AircraftChip.Visibility = state is null ? Visibility.Collapsed : Visibility.Visible;
+    AircraftText.Text = state?.Position.Module ?? "";
+    SteerpointChip.Visibility = state?.ActiveSteerpoint is null ? Visibility.Collapsed : Visibility.Visible;
+    SteerpointText.Text = state?.ActiveSteerpoint is { } number ? $"STPT {number}" : "";
+  }
+
+  private void UpdateTransferProgress(DcsState? state)
+  {
+    if (!IsTransferInProgress) return;
+    if (state?.IsEnteringWaypoints == true)
+    {
+      _transferStarted = true;
+      return;
+    }
+
+    if (!_transferStarted && DateTimeOffset.UtcNow - _transferClickedUtc < TransferStartTimeout) return;
+    if (MessageBar.Message == _transferMessage) MessageBar.IsOpen = false;
+    _transferMessage = null;
+  }
+
+  private void RefreshTransferMarks(long? aircraftId)
+  {
+    for (var i = 0; i < _items.Count; i++)
+    {
+      var item = _items[i];
+      var transferred = !IsTransferInProgress && _transferHistory.Contains(aircraftId, item.Waypoint);
+      if (item.IsTransferred != transferred) _items[i] = item with { IsTransferred = transferred };
+    }
   }
 
   private void OnMarkReceived(object? sender, DcsPosition position) =>
@@ -78,12 +124,13 @@ public sealed partial class MainPage : Page
   private async Task AddWaypointAsync(DcsPosition position)
   {
     var number = _nextWaypointNumber++;
-    var waypoint = new Waypoint(number, $"W{number}", position.Latitude, position.Longitude, position.ElevationMeters);
-    _waypoints.Add(waypoint);
-    WaypointList.ScrollIntoView(waypoint);
+    var waypoint = new Waypoint(_nextWaypointId++, $"W{number}", position.Latitude, position.Longitude, position.ElevationMeters);
+    var item = new WaypointItem(waypoint, false);
+    _items.Add(item);
+    WaypointList.ScrollIntoView(item);
     Refresh();
     await App.DcsSender.ShowStatusAsync($"{waypoint.Name} added");
-    await App.DcsSender.ShowRouteAsync(_waypoints);
+    await App.DcsSender.ShowRouteAsync(Waypoints);
   }
 
   private async void CrosshairButton_Click(object sender, RoutedEventArgs e)
@@ -104,9 +151,10 @@ public sealed partial class MainPage : Page
       return;
     }
 
+    var waypoints = Waypoints;
     _transferClickedUtc = DateTimeOffset.UtcNow;
     TransferButton.IsEnabled = false;
-    if (_transferHistory.IsRepeat(state.AircraftId, _waypoints) && await RepeatTransferDialog.ShowAsync() != ContentDialogResult.Primary)
+    if (_transferHistory.IsRepeat(state.AircraftId, waypoints) && await RepeatTransferDialog.ShowAsync() != ContentDialogResult.Primary)
     {
       _transferClickedUtc = default;
       Refresh();
@@ -114,11 +162,13 @@ public sealed partial class MainPage : Page
     }
 
     _transferClickedUtc = DateTimeOffset.UtcNow;
-    var presses = F16.CreateButtonPresses(_waypoints.Select(F16.Format), App.Settings.Current.StartAtActiveSteerpoint);
+    var presses = F16.CreateButtonPresses(waypoints.Select(F16.Format), App.Settings.Current.StartAtActiveSteerpoint);
     if (await App.DcsSender.SendWaypointsAsync(presses))
     {
-      _transferHistory.Record(state.AircraftId, _waypoints);
-      ShowMessage(InfoBarSeverity.Success, $"Entering {_waypoints.Count} waypoints, don't touch the cockpit controls");
+      _transferHistory.Record(state.AircraftId, waypoints);
+      _transferMessage = $"Entering {waypoints.Count} waypoints, don't touch the cockpit controls";
+      _transferStarted = false;
+      ShowMessage(InfoBarSeverity.Informational, _transferMessage);
       return;
     }
 
@@ -128,18 +178,18 @@ public sealed partial class MainPage : Page
 
   private async void DeleteWaypointButton_Click(object sender, RoutedEventArgs e)
   {
-    if (((FrameworkElement)sender).DataContext is not Waypoint waypoint) return;
-    _waypoints.Remove(waypoint);
+    if (((FrameworkElement)sender).DataContext is not WaypointItem item) return;
+    _items.Remove(item);
     Refresh();
-    await App.DcsSender.ShowRouteAsync(_waypoints);
+    await App.DcsSender.ShowRouteAsync(Waypoints);
   }
 
   private async void ClearButton_Click(object sender, RoutedEventArgs e)
   {
-    _waypoints.Clear();
+    _items.Clear();
     _nextWaypointNumber = 1;
     Refresh();
-    await App.DcsSender.ShowRouteAsync(_waypoints);
+    await App.DcsSender.ShowRouteAsync(Waypoints);
   }
 
   private void ShowMessage(InfoBarSeverity severity, string message)
@@ -147,14 +197,5 @@ public sealed partial class MainPage : Page
     MessageBar.Severity = severity;
     MessageBar.Message = message;
     MessageBar.IsOpen = true;
-  }
-
-  private static string GetDcsStatus(DcsState? state)
-  {
-    if (!App.DcsListener.IsListening) return $"Port {DcsListener.DefaultPort} is in use by another program. Close it and restart DCSMyWay.";
-    if (state is null) return "No connection to DCS";
-    var camera = Describe(state.Position.Latitude, state.Position.Longitude, state.Position.ElevationMeters);
-    var activity = state.IsEnteringWaypoints ? "\nEntering waypoints..." : "";
-    return $"{state.Position.Module}\n{camera}{activity}";
   }
 }
