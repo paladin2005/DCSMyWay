@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+using DCSMyWay.Interop;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -15,22 +15,37 @@ public sealed partial class MainWindow : Window
   {
     InitializeComponent();
 
+    Hwnd = Win32Interop.GetWindowFromWindowId(AppWindow.Id);
     ExtendsContentIntoTitleBar = true;
     SetTitleBar(AppTitleBar);
     AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico"));
 
-    var hwnd = Win32Interop.GetWindowFromWindowId(AppWindow.Id);
-    var scale = GetDpiForWindow(hwnd) / 96.0;
+    var scale = NativeMethods.GetDpiForWindow(Hwnd) / 96.0;
     AppWindow.Resize(new SizeInt32((int)(WindowWidth * scale), (int)(WindowHeight * scale)));
     if (AppWindow.Presenter is OverlappedPresenter presenter)
     {
       presenter.IsResizable = false;
       presenter.IsMaximizable = false;
     }
+    SetAlwaysOnTop(true);
+    SetActivatable(false);
 
     RootFrame.Navigate(typeof(MainPage));
   }
 
-  [DllImport("user32.dll")]
-  private static extern uint GetDpiForWindow(IntPtr hwnd);
+  public nint Hwnd { get; }
+
+  public bool IsForeground => NativeMethods.GetForegroundWindow() == Hwnd;
+
+  public void SetAlwaysOnTop(bool alwaysOnTop)
+  {
+    if (AppWindow.Presenter is OverlappedPresenter presenter) presenter.IsAlwaysOnTop = alwaysOnTop;
+  }
+
+  public void SetActivatable(bool activatable)
+  {
+    var style = NativeMethods.GetWindowLongPtr(Hwnd, NativeMethods.GwlExStyle);
+    style = activatable ? style & ~NativeMethods.WsExNoActivate : style | NativeMethods.WsExNoActivate;
+    NativeMethods.SetWindowLongPtr(Hwnd, NativeMethods.GwlExStyle, style);
+  }
 }
