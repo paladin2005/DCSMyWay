@@ -1,0 +1,81 @@
+# DCSMyWay
+
+A modern, low-memory replacement for DCSTheWay (`C:\Workspace\DCSTheWay`) that imports waypoints into DCS World aircraft. It will eventually replace all of TheWay, including its DCS Lua scripts.
+
+## General
+
+- Code, comments, UI text, documentation and commit messages in English; responses to the user in Spanish
+- Never add comments when editing code
+- Always `async/await` (no `.Result` / `.Wait()`)
+- Indent: 2 spaces (`.editorconfig`)
+- Git commits: `type(scope): brief description` - no Co-Authored-By
+  - Types: feat, fix, refactor, style, docs, chore, test, ci
+  - Scope: primary area affected (window, aircraft, dcs, settings, build, etc.)
+  - Description in English, lowercase, no trailing period
+
+## Permissions
+
+- Do not ask for permission for read operations (Read, grep, find, ls, cat)
+- Only ask for permission before writing, modifying, or deleting files
+- During the planning phase, explore freely without interrupting
+
+## Before Writing Code
+
+- Inspect the repository structure
+- Locate an existing module with similar functionality
+- Use that module as the implementation reference
+- Follow the existing design and UX patterns of the application
+
+## Consistency
+
+- Reuse existing controls and views whenever possible
+- Maintain consistent buttons, colors, spacing and layouts
+- Prefer existing UI components over creating new ones
+- Do not introduce new visual styles unless explicitly requested
+- Keep dialogs inline in the view; extract to a separate control only when the view or dialog is complex enough to hurt readability
+
+---
+
+# C# - .NET 10 + WinUI 3
+
+## Rules
+
+- ALWAYS use the dedicated WinUI control for the job (`NumberBox` for numbers, `InfoBar` for status messages, `ContentDialog` for confirmations), never a generic control + property hack or hand-rolled markup. If the control you need does not exist in WinUI, ASK first
+- Use theme resources (`{ThemeResource}` brushes, built-in text styles) instead of hard-coded colors and fonts
+- Primary constructors for DI
+- File-scoped namespaces
+- `DateTimeOffset` UTC for all dates
+- Single-statement `if`/`for` on one line: `if (!valid) return;`
+- Flat namespaces - subfolders are for organization only, never nest the namespace (everything under `Services/` is `DCSMyWay.Services`, whatever its subfolder)
+
+## Do NOT
+
+- No separate projects (Core/UI/Infrastructure) - single app project with logical folders (a test project is fine)
+- No interfaces for services - no interface-per-class without reason
+- No MediatR/CQRS, no AutoMapper/Mapster
+
+## Stack
+
+- .NET 10, WinUI 3 (Windows App SDK 2.5), x64 only
+- Unpackaged and self-contained: the publish folder runs on any PC without installing runtimes
+- No Visual Studio on this machine; everything builds with the `dotnet` CLI
+
+## Commands
+
+```bash
+dotnet build src/DCSMyWay
+dotnet publish src/DCSMyWay -c Release
+```
+
+- Run: `src/DCSMyWay/bin/Debug/net10.0-windows10.0.26100.0/win-x64/DCSMyWay.exe`
+- Publish output: `src/DCSMyWay/bin/Release/net10.0-windows10.0.26100.0/win-x64/publish/`
+- Validate changes with `dotnet build`; ask the user to confirm anything visual
+
+## Gotchas
+
+- Keep `EnableMsixTooling` on even though the app is unpackaged: without it `dotnet publish` leaves out the app's `.pri`/`.xbf` and the app crashes with "Cannot locate resource from 'ms-appx:///MainWindow.xaml'"
+- Content files need `CopyToPublishDirectory` to reach the publish folder
+- Don't use `RuntimeInfo.AsString`: in self-contained mode it throws trying to load `Microsoft.WindowsAppRuntime.Insights.Resource.dll`
+- Resolve file paths from `AppContext.BaseDirectory`, never from the working directory
+- Native AOT needs the MSVC linker (Visual Studio Build Tools, "Desktop development with C++"), which is not installed
+- Startup crashes show up as `0xC000027B`; the real exception is written to `%TEMP%\DCSMyWay-crash.log`
