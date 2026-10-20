@@ -1,8 +1,7 @@
 using DCSMyWay.Interop;
-using Microsoft.UI;
+using DCSMyWay.Models;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
-using Windows.Graphics;
 
 namespace DCSMyWay;
 
@@ -10,25 +9,25 @@ public sealed partial class MainWindow : Window
 {
   private const int WindowWidth = 360;
   private const int WindowHeight = 520;
+  private SettingsWindow? _settingsWindow;
 
   public MainWindow()
   {
     InitializeComponent();
 
-    Hwnd = Win32Interop.GetWindowFromWindowId(AppWindow.Id);
+    Hwnd = WindowInterop.GetHwnd(this);
     ExtendsContentIntoTitleBar = true;
     SetTitleBar(AppTitleBar);
     AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico"));
-
-    var scale = NativeMethods.GetDpiForWindow(Hwnd) / 96.0;
-    AppWindow.Resize(new SizeInt32((int)(WindowWidth * scale), (int)(WindowHeight * scale)));
+    WindowInterop.Resize(this, WindowWidth, WindowHeight);
     if (AppWindow.Presenter is OverlappedPresenter presenter)
     {
       presenter.IsResizable = false;
       presenter.IsMaximizable = false;
     }
-    SetAlwaysOnTop(true);
-    SetActivatable(false);
+
+    ApplySettings(App.Settings.Current);
+    App.Settings.Changed += (_, settings) => ApplySettings(settings);
 
     RootFrame.Navigate(typeof(MainPage));
   }
@@ -37,15 +36,21 @@ public sealed partial class MainWindow : Window
 
   public bool IsForeground => NativeMethods.GetForegroundWindow() == Hwnd;
 
-  public void SetAlwaysOnTop(bool alwaysOnTop)
+  public void SetActivatable(bool activatable) => WindowInterop.SetActivatable(this, activatable);
+
+  private void ApplySettings(AppSettings settings)
   {
-    if (AppWindow.Presenter is OverlappedPresenter presenter) presenter.IsAlwaysOnTop = alwaysOnTop;
+    if (AppWindow.Presenter is OverlappedPresenter presenter) presenter.IsAlwaysOnTop = settings.AlwaysOnTop;
+    SetActivatable(!settings.DontTakeFocus);
   }
 
-  public void SetActivatable(bool activatable)
+  private void SettingsButton_Click(object sender, RoutedEventArgs e)
   {
-    var style = NativeMethods.GetWindowLongPtr(Hwnd, NativeMethods.GwlExStyle);
-    style = activatable ? style & ~NativeMethods.WsExNoActivate : style | NativeMethods.WsExNoActivate;
-    NativeMethods.SetWindowLongPtr(Hwnd, NativeMethods.GwlExStyle, style);
+    if (_settingsWindow is null)
+    {
+      _settingsWindow = new SettingsWindow(this);
+      _settingsWindow.Closed += (_, _) => _settingsWindow = null;
+    }
+    _settingsWindow.Show();
   }
 }

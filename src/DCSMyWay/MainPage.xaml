@@ -5,14 +5,6 @@
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
   <StackPanel Padding="16" Spacing="12">
-    <ToggleSwitch
-      x:Name="AlwaysOnTopSwitch"
-      Header="Always on top"
-      IsOn="True" />
-    <ToggleSwitch
-      x:Name="NoActivateSwitch"
-      Header="Don't take focus from other apps"
-      IsOn="True" />
     <TextBlock
       x:Name="ForegroundText"
       Foreground="{ThemeResource TextFillColorSecondaryBrush}"

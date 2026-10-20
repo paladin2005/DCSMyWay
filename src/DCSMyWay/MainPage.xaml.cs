@@ -26,9 +26,6 @@ public sealed partial class MainPage : Page
 
   private void OnLoaded(object sender, RoutedEventArgs e)
   {
-    AlwaysOnTopSwitch.Toggled += (_, _) => App.MainWindow.SetAlwaysOnTop(AlwaysOnTopSwitch.IsOn);
-    NoActivateSwitch.Toggled += (_, _) => App.MainWindow.SetActivatable(!NoActivateSwitch.IsOn);
-
     _keyboardHook.KeyPressed += OnKeyPressed;
     _keyboardHook.Start();
 
@@ -62,7 +59,7 @@ public sealed partial class MainPage : Page
 
   private void TypingTestBox_PointerEntered(object sender, PointerRoutedEventArgs e)
   {
-    if (!NoActivateSwitch.IsOn) return;
+    if (!App.Settings.Current.DontTakeFocus) return;
     var foreground = NativeMethods.GetForegroundWindow();
     if (foreground != App.MainWindow.Hwnd) _focusReturnWindow = foreground;
     App.MainWindow.SetActivatable(true);
@@ -70,7 +67,7 @@ public sealed partial class MainPage : Page
 
   private void TypingTestBox_PointerExited(object sender, PointerRoutedEventArgs e)
   {
-    if (!NoActivateSwitch.IsOn) return;
+    if (!App.Settings.Current.DontTakeFocus) return;
     App.MainWindow.SetActivatable(false);
     if (App.MainWindow.IsForeground && _focusReturnWindow != 0) NativeMethods.SetForegroundWindow(_focusReturnWindow);
   }

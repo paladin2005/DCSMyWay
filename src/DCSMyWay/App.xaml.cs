@@ -1,3 +1,4 @@
+using DCSMyWay.Services;
 using Microsoft.UI.Xaml;
 
 namespace DCSMyWay;
@@ -12,11 +13,15 @@ public partial class App : Application
       $"{e.Message}\n{e.Exception}");
   }
 
+  public static SettingsService Settings { get; } = new(SettingsService.DefaultPath);
+
   public static MainWindow MainWindow { get; private set; } = null!;
 
-  protected override void OnLaunched(LaunchActivatedEventArgs args)
+  protected override async void OnLaunched(LaunchActivatedEventArgs args)
   {
+    await Settings.LoadAsync();
     MainWindow = new MainWindow();
+    MainWindow.Closed += (_, _) => Exit();
     MainWindow.Activate();
   }
 }
