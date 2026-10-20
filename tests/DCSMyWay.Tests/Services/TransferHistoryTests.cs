@@ -71,6 +71,40 @@ public class TransferHistoryTests
   }
 
   [Fact]
+  public void ContainsTheWaypointsTransferredToThisAircraft()
+  {
+    var history = new TransferHistory();
+
+    history.Record(16777472, [W1, W2]);
+
+    Assert.True(history.Contains(16777472, W1));
+    Assert.True(history.Contains(16777472, W2));
+    Assert.False(history.Contains(16777472, W3));
+  }
+
+  [Fact]
+  public void DoesNotContainWaypointsForAnotherAircraft()
+  {
+    var history = new TransferHistory();
+
+    history.Record(16777472, [W1]);
+
+    Assert.False(history.Contains(16777999, W1));
+  }
+
+  [Fact]
+  public void ContainsNothingBeforeTheFirstTransferOrAfterClear()
+  {
+    var history = new TransferHistory();
+    Assert.False(history.Contains(16777472, W1));
+
+    history.Record(16777472, [W1]);
+    history.Clear();
+
+    Assert.False(history.Contains(16777472, W1));
+  }
+
+  [Fact]
   public void RecordKeepsACopyOfTheRoute()
   {
     var history = new TransferHistory();

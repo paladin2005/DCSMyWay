@@ -40,7 +40,8 @@ public static class DcsProtocol
     if (type is null) return false;
 
     var position = new DcsPosition(incoming.Model, latitude, longitude, elevation);
-    message = new DcsMessage(type.Value, new DcsState(position, incoming.Crosshair == true, incoming.Busy == true, incoming.AircraftId));
+    var state = new DcsState(position, incoming.Crosshair == true, incoming.Busy == true, incoming.AircraftId, incoming.Steerpoint);
+    message = new DcsMessage(type.Value, state);
     return true;
   }
 
@@ -73,7 +74,8 @@ internal sealed record IncomingMessage(
   double? Elev,
   bool? Crosshair,
   bool? Busy,
-  long? AircraftId);
+  long? AircraftId,
+  int? Steerpoint);
 
 internal sealed record WaypointsCommand(string Type, List<ButtonPressCommand> Presses);
 
