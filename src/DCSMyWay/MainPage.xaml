@@ -109,7 +109,7 @@
               FontSize="12"
               Foreground="{ThemeResource SystemFillColorSuccessBrush}"
               Glyph="&#xE73E;"
-              Visibility="{x:Bind IsTransferred}" />
+              Visibility="{x:Bind IsTransferred, Mode=OneWay}" />
             <TextBlock
               Grid.Column="1"
               VerticalAlignment="Center"
@@ -143,10 +143,22 @@
       <Button
         x:Name="TransferButton"
         AutomationProperties.AutomationId="TransferButton"
+        AutomationProperties.Name="Transfer to aircraft"
         Click="TransferButton_Click"
-        Content="Transfer to aircraft"
         IsEnabled="False"
-        Style="{StaticResource AccentButtonStyle}" />
+        Style="{StaticResource AccentButtonStyle}">
+        <Grid>
+          <TextBlock
+            x:Name="TransferText"
+            HorizontalAlignment="Center"
+            Text="Transfer to aircraft" />
+          <TextBlock
+            x:Name="CancelTransferText"
+            HorizontalAlignment="Center"
+            Opacity="0"
+            Text="Cancel transfer" />
+        </Grid>
+      </Button>
       <Button
         x:Name="ClearButton"
         AutomationProperties.AutomationId="ClearButton"

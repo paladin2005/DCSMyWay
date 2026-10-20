@@ -80,6 +80,12 @@ public class DcsProtocolTests
   }
 
   [Fact]
+  public void SerializesTheCancelCommand()
+  {
+    Assert.Equal("""{"type":"cancel"}""", DcsProtocol.CreateCancelCommand());
+  }
+
+  [Fact]
   public void SerializesTheStatusCommand()
   {
     Assert.Equal("""{"type":"status","text":"W3 added"}""", DcsProtocol.CreateStatusCommand("W3 added"));

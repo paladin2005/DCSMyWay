@@ -10,7 +10,7 @@ local DialogLoader = require('DialogLoader')
 local SkinUtils = require('SkinUtils')
 local Terrain = require('terrain')
 
-local VERSION = '0.4.0'
+local VERSION = '0.5.0'
 local HOST = '127.0.0.1'
 local APP_PORT = 42080
 local COMMAND_PORT = 42081
@@ -367,6 +367,13 @@ local function startPresses(list)
   info('Entering ' .. #list .. ' button presses')
 end
 
+local function cancelPresses()
+  if not presses then return end
+  if pressed and pressed.depress then Export.GetDevice(pressed.device):performClickableAction(pressed.code, 0) end
+  info(string.format('Waypoint entry cancelled after %d of %d button presses', pressIndex - 1, #presses))
+  stopPresses()
+end
+
 local function stepPresses(now)
   if not presses then return end
   if pressed then
@@ -430,6 +437,8 @@ local function handleCommand(line)
     setCrosshairVisible(command.visible == true)
   elseif command.type == 'waypoints' then
     startPresses(command.presses)
+  elseif command.type == 'cancel' then
+    cancelPresses()
   elseif command.type == 'status' then
     markSentAt = nil
     showStatus(tostring(command.text or ''))
