@@ -9,13 +9,13 @@ public class DcsProtocolTests
   [Fact]
   public void ParsesTheCameraMessageSentByTheDcsScript()
   {
-    var json = """{"type":"camera","model":"F-16C_50","lat":41.905925545,"lon":43.783457188,"elev":1677.665,"crosshair":true,"busy":false}""";
+    var json = """{"type":"camera","model":"F-16C_50","lat":41.905925545,"lon":43.783457188,"elev":1677.665,"crosshair":true,"busy":false,"aircraftId":16777472}""";
 
     var parsed = DcsProtocol.TryParseMessage(Encoding.UTF8.GetBytes(json), out var message);
 
     Assert.True(parsed);
     Assert.Equal(
-      new DcsMessage(DcsMessageType.Camera, new DcsState(new DcsPosition("F-16C_50", 41.905925545, 43.783457188, 1677.665), true, false)),
+      new DcsMessage(DcsMessageType.Camera, new DcsState(new DcsPosition("F-16C_50", 41.905925545, 43.783457188, 1677.665), true, false, 16777472)),
       message);
   }
 
@@ -30,6 +30,19 @@ public class DcsProtocolTests
     Assert.Equal(DcsMessageType.Mark, message!.Type);
     Assert.Equal(new DcsPosition("F-16C_50", -34.5, -58.25, 12.5), message.State.Position);
     Assert.True(message.State.IsEnteringWaypoints);
+  }
+
+  [Theory]
+  [InlineData(""","aircraftId":null""")]
+  [InlineData("")]
+  public void HasNoAircraftIdWhenDcsDoesNotReportOne(string aircraftId)
+  {
+    var json = $$"""{"type":"camera","model":"Spectator","lat":1,"lon":2,"elev":3,"crosshair":false,"busy":false{{aircraftId}}}""";
+
+    var parsed = DcsProtocol.TryParseMessage(Encoding.UTF8.GetBytes(json), out var message);
+
+    Assert.True(parsed);
+    Assert.Null(message!.State.AircraftId);
   }
 
   [Theory]

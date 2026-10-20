@@ -10,11 +10,13 @@ namespace DCSMyWay;
 
 public sealed partial class MainPage : Page
 {
-  private static readonly TimeSpan CrosshairSyncDelay = TimeSpan.FromSeconds(1);
+  private static readonly TimeSpan DcsSyncDelay = TimeSpan.FromSeconds(1);
 
   private readonly ObservableCollection<Waypoint> _waypoints = [];
+  private readonly TransferHistory _transferHistory = new();
   private DispatcherQueueTimer? _refreshTimer;
   private DateTimeOffset _crosshairClickedUtc;
+  private DateTimeOffset _transferClickedUtc;
   private int _nextWaypointNumber = 1;
   private bool _wasConnected;
 
@@ -54,6 +56,7 @@ public sealed partial class MainPage : Page
     var connected = App.DcsListener.IsConnected;
     var reconnected = connected && !_wasConnected;
     _wasConnected = connected;
+    if (!connected) _transferHistory.Clear();
     if (reconnected && _waypoints.Count > 0) await App.DcsSender.ShowRouteAsync(_waypoints);
   }
 
@@ -62,8 +65,10 @@ public sealed partial class MainPage : Page
     var state = App.DcsListener.IsConnected ? App.DcsListener.Latest : null;
     DcsStatusText.Text = GetDcsStatus(state);
     CrosshairButton.IsEnabled = state is not null;
-    if (DateTimeOffset.UtcNow - _crosshairClickedUtc > CrosshairSyncDelay) CrosshairButton.IsChecked = state?.CrosshairVisible == true;
-    TransferButton.IsEnabled = _waypoints.Count > 0 && state is { IsEnteringWaypoints: false };
+    if (DateTimeOffset.UtcNow - _crosshairClickedUtc > DcsSyncDelay) CrosshairButton.IsChecked = state?.CrosshairVisible == true;
+    TransferButton.IsEnabled = _waypoints.Count > 0
+      && state is { IsEnteringWaypoints: false }
+      && DateTimeOffset.UtcNow - _transferClickedUtc > DcsSyncDelay;
     ClearButton.IsEnabled = _waypoints.Count > 0;
   }
 
@@ -92,17 +97,33 @@ public sealed partial class MainPage : Page
 
   private async void TransferButton_Click(object sender, RoutedEventArgs e)
   {
-    var module = App.DcsListener.Latest?.Position.Module;
-    if (module is null || !F16.ModuleNames.Contains(module))
+    var state = App.DcsListener.Latest;
+    if (state is null || !F16.ModuleNames.Contains(state.Position.Module))
     {
-      ShowMessage(InfoBarSeverity.Warning, $"Only the F-16 is supported for now ({module ?? "no aircraft"})");
+      ShowMessage(InfoBarSeverity.Warning, $"Only the F-16 is supported for now ({state?.Position.Module ?? "no aircraft"})");
       return;
     }
 
+    _transferClickedUtc = DateTimeOffset.UtcNow;
+    TransferButton.IsEnabled = false;
+    if (_transferHistory.IsRepeat(state.AircraftId, _waypoints) && await RepeatTransferDialog.ShowAsync() != ContentDialogResult.Primary)
+    {
+      _transferClickedUtc = default;
+      Refresh();
+      return;
+    }
+
+    _transferClickedUtc = DateTimeOffset.UtcNow;
     var presses = F16.CreateButtonPresses(_waypoints.Select(F16.Format), App.Settings.Current.StartAtActiveSteerpoint);
-    var sent = await App.DcsSender.SendWaypointsAsync(presses);
-    if (sent) ShowMessage(InfoBarSeverity.Success, $"Entering {_waypoints.Count} waypoints, don't touch the cockpit controls");
-    else ShowMessage(InfoBarSeverity.Error, "DCS is not reachable");
+    if (await App.DcsSender.SendWaypointsAsync(presses))
+    {
+      _transferHistory.Record(state.AircraftId, _waypoints);
+      ShowMessage(InfoBarSeverity.Success, $"Entering {_waypoints.Count} waypoints, don't touch the cockpit controls");
+      return;
+    }
+
+    _transferClickedUtc = default;
+    ShowMessage(InfoBarSeverity.Error, "DCS is not reachable");
   }
 
   private async void DeleteWaypointButton_Click(object sender, RoutedEventArgs e)
