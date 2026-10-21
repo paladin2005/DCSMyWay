@@ -6,7 +6,7 @@ package.cpath = package.cpath .. ';' .. lfs.currentdir() .. '/LuaSocket/?.dll'
 local socket = require('socket')
 local JSON = loadfile(lfs.currentdir() .. '/Scripts/JSON.lua')()
 
-local VERSION = '0.11.0'
+local VERSION = '0.12.0'
 local HOST = '127.0.0.1'
 local APP_PORT = 42080
 local COMMAND_PORT = 42082
@@ -15,12 +15,14 @@ local STEERPOINT_INTERVAL = 0.5
 local BIND_RETRY_INTERVAL = 2
 local CLIENT_TIMEOUT = 5
 local CHECK_INTERVAL = 0.05
+local ARGUMENT_TOLERANCE = 0.03
 local STEERPOINT_SOURCES = {
   { model = '^F%-16', indicators = { 6 }, elements = { 'Selected Steerpoint', 'STEERPOINT NUMBER', 'INS_SelectedSteerpoint' }, display = 'DED' },
   { model = '^FA%-18', indicators = { 4, 2, 3 }, elements = { 'WYPT_Page_Number' } },
   { model = '^A%-10C', indicators = { 3 }, elements = { 'CurrSteerPointNumber' } },
   { model = '^AH%-64', seatIndicators = { [0] = { 9, 7 }, [1] = { 13, 11 } }, elements = { 'NextWaypointStatusWindow_text_1' }, pattern = '^W(%d+)$' },
   { model = '^Ka%-50', indicators = { 5 }, elements = { 'txt_OIT_PPM' }, requires = 'txt_VIT' },
+  { model = '^Mirage%-F1EE', argument = 1361, scale = 10 },
 }
 local SEAT_MODELS = {
   '^AH%-64',
@@ -114,7 +116,19 @@ local function readElements(indicator)
   return text and parseIndication(text) or {}
 end
 
+local function readArgument(argument)
+  local read, device = pcall(GetDevice, 0)
+  if not read or not device then return nil end
+  local ok, value = pcall(device.get_argument_value, device, argument)
+  return ok and type(value) == 'number' and value or nil
+end
+
 local function readSourceSteerpoint(source, logUnknown)
+  if source.argument then
+    local value = readArgument(source.argument)
+    local current = value and math.floor(value * source.scale + 0.5)
+    return current and current > 0 and current or nil
+  end
   local indicators = source.seatIndicators and source.seatIndicators[seat or 0] or source.indicators
   for _, indicator in ipairs(indicators) do
     local text = readIndication(indicator)
@@ -261,7 +275,16 @@ local function cancelSteps()
   stopSteps()
 end
 
+local function argumentsHold(check)
+  for index, argument in ipairs(check.arguments) do
+    local value = readArgument(argument)
+    if not value or math.abs(value - check.levels[index]) > ARGUMENT_TOLERANCE then return false end
+  end
+  return true
+end
+
 local function checkHolds(check, displays)
+  if check.arguments then return argumentsHold(check) end
   local elements = displays[check.indicator]
   if not elements then
     elements = readElements(check.indicator)
@@ -307,13 +330,18 @@ local function describeChecks(step)
   local parts = {}
   for _, check in ipairs(checks) do
     local found = false
-    for name, value in pairs(readElements(check.indicator)) do
+    for _, argument in ipairs(check.arguments or {}) do
+      local value = readArgument(argument)
+      table.insert(parts, 'argument ' .. argument .. ' = ' .. (value and string.format('%.3f', value) or '?'))
+      found = true
+    end
+    for name, value in pairs(check.arguments and {} or readElements(check.indicator)) do
       if name:find(check.element) then
         table.insert(parts, name .. ' = ' .. value)
         found = true
       end
     end
-    if not found then table.insert(parts, check.element .. ' not shown') end
+    if not found then table.insert(parts, tostring(check.element) .. ' not shown') end
   end
   return table.concat(parts, ', ')
 end

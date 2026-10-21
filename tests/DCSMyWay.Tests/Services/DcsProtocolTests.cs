@@ -135,6 +135,25 @@ public class DcsProtocolTests
   }
 
   [Fact]
+  public void SerializesChecksOfCockpitArgumentsNextToDisplayChecks()
+  {
+    CockpitStep[] steps =
+    [
+      new(new(1, 3707, 100)) { UnlessArguments = [new([1274], [0])], WaitArguments = [new([1274, 1335], [0, 1])], Timeout = 1000 },
+      new(new(1, 3694, 100, 0.111, false)) { Until = [new(5, "^txt_VIT$")], UntilArguments = [new([667], [0.222])], Tries = 9, Timeout = 700 },
+    ];
+
+    var command = DcsProtocol.CreateWaypointsCommand(8, steps);
+
+    Assert.Equal(
+      """{"type":"waypoints","id":8,"steps":[""" +
+      """{"device":1,"code":3707,"delay":100,"activate":1,"depress":true,"wait":[{"arguments":[1274,1335],"levels":[0,1]}],"tries":1,"timeout":1000,"unless":[{"arguments":[1274],"levels":[0]}]},""" +
+      """{"device":1,"code":3694,"delay":100,"activate":0.111,"depress":false,"until":[{"indicator":5,"element":"^txt_VIT$"},{"arguments":[667],"levels":[0.222]}],"tries":9,"timeout":700}""" +
+      """]}""",
+      command);
+  }
+
+  [Fact]
   public void SerializesStepsThatChooseAButtonByWhatTheDisplayShows()
   {
     CockpitStep[] steps =
