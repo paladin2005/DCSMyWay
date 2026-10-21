@@ -6,7 +6,7 @@ package.cpath = package.cpath .. ';' .. lfs.currentdir() .. '/LuaSocket/?.dll'
 local socket = require('socket')
 local JSON = loadfile(lfs.currentdir() .. '/Scripts/JSON.lua')()
 
-local VERSION = '0.10.0'
+local VERSION = '0.11.0'
 local HOST = '127.0.0.1'
 local APP_PORT = 42080
 local COMMAND_PORT = 42082
@@ -20,6 +20,7 @@ local STEERPOINT_SOURCES = {
   { model = '^FA%-18', indicators = { 4, 2, 3 }, elements = { 'WYPT_Page_Number' } },
   { model = '^A%-10C', indicators = { 3 }, elements = { 'CurrSteerPointNumber' } },
   { model = '^AH%-64', seatIndicators = { [0] = { 9, 7 }, [1] = { 13, 11 } }, elements = { 'NextWaypointStatusWindow_text_1' }, pattern = '^W(%d+)$' },
+  { model = '^Ka%-50', indicators = { 5 }, elements = { 'txt_OIT_PPM' }, requires = 'txt_VIT' },
 }
 local SEAT_MODELS = {
   '^AH%-64',
@@ -119,7 +120,8 @@ local function readSourceSteerpoint(source, logUnknown)
     local text = readIndication(indicator)
     if text then
       local elements = parseIndication(text)
-      for _, name in ipairs(source.elements) do
+      local shown = not source.requires or elements[source.requires]
+      for _, name in ipairs(shown and source.elements or {}) do
         local current = elements[name] and tonumber(elements[name]:match(source.pattern or '%d+'))
         if current then return current end
       end

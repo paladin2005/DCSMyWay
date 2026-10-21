@@ -48,9 +48,10 @@ public static class AH64
     1,
     LastWaypoint,
     "Show the TSD in NAV phase on one of your MPDs so DCSMyWay can read the current waypoint",
-    CreateTransfer)
+    (waypoints, start) => CreateTransfer(waypoints, start.Steerpoint, start.Seat))
   {
     SupportsTargets = true,
+    SupportsThreats = true,
   };
 
   public static string FreeText(string name) =>

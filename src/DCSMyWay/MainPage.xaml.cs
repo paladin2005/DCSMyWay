@@ -252,10 +252,18 @@ public sealed partial class MainPage : Page
       return;
     }
 
-    var sequence = aircraft.CreateTransfer(pending.Waypoints, start, state.Seat);
+    var firstTarget = waypoints.Take(waypoints.Count - pending.Waypoints.Count).Count(w => w.IsTarget) + 1;
+    var sequence = aircraft.CreateTransfer(pending.Waypoints, new TransferStart(start, firstTarget, state.Seat));
     if (sequence.Steerpoints.Max() > aircraft.LastSteerpoint)
     {
       ShowMessage(InfoBarSeverity.Warning, $"These waypoints don't fit: the {aircraft.Name} has {aircraft.SteerpointName}s up to {aircraft.LastSteerpoint}");
+      return;
+    }
+
+    var targets = sequence.Steerpoints.Count(s => s is null);
+    if (targets > 0 && firstTarget + targets - 1 > aircraft.LastTarget)
+    {
+      ShowMessage(InfoBarSeverity.Warning, $"These targets don't fit: the {aircraft.Name} has targets up to {aircraft.LastTarget}");
       return;
     }
 
@@ -312,7 +320,8 @@ public sealed partial class MainPage : Page
     _editingItem = item;
     NameBox.Text = item.Waypoint.Name;
     ThreatBox.SelectedItem = ApacheThreats.Find(item.Waypoint.Threat);
-    ThreatBox.Visibility = item.ShowsTargetToggle && item.Waypoint.IsTarget ? Visibility.Visible : Visibility.Collapsed;
+    var supportsThreats = SupportedAircraft.Find(App.DcsListener.Latest?.Position.Module)?.SupportsThreats == true;
+    ThreatBox.Visibility = supportsThreats && item.Waypoint.IsTarget ? Visibility.Visible : Visibility.Collapsed;
     ValidateName();
     if (await App.MainWindow.ShowWithKeyboardAsync(EditDialog) != ContentDialogResult.Primary) return;
     var threat = ThreatBox.Visibility == Visibility.Visible ? (ThreatBox.SelectedItem as ApacheThreat)?.Code : item.Waypoint.Threat;

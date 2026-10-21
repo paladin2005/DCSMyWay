@@ -135,7 +135,7 @@ public class A10Tests
     Assert.Same(A10.Aircraft, SupportedAircraft.Find("A-10C_2"));
     Assert.Null(SupportedAircraft.Find("A-10A"));
     Assert.Equal((1, 50), (A10.Aircraft.FirstSteerpoint, A10.Aircraft.LastSteerpoint));
-    Assert.Equal("F-16, F/A-18C, A-10C and AH-64D", SupportedAircraft.Names);
+    Assert.Equal("F-16, F/A-18C, A-10C, AH-64D and Ka-50", SupportedAircraft.Names);
   }
 
   [Theory]
