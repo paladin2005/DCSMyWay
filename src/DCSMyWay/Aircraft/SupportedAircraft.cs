@@ -10,11 +10,15 @@ public sealed record SupportedAircraft(
   int FirstSteerpoint,
   int LastSteerpoint,
   string SteerpointHint,
-  Func<IEnumerable<Waypoint>, int, int?, TransferSequence> CreateTransfer)
+  Func<IEnumerable<Waypoint>, TransferStart, TransferSequence> CreateTransfer)
 {
   public bool SupportsTargets { get; init; }
 
-  public static IReadOnlyList<SupportedAircraft> All => [F16.Aircraft, F18.Aircraft, A10.Aircraft, AH64.Aircraft];
+  public bool SupportsThreats { get; init; }
+
+  public int? LastTarget { get; init; }
+
+  public static IReadOnlyList<SupportedAircraft> All => [F16.Aircraft, F18.Aircraft, A10.Aircraft, AH64.Aircraft, Ka50.Aircraft];
 
   public static string Names => $"{string.Join(", ", All.SkipLast(1).Select(a => a.Name))} and {All[^1].Name}";
 
