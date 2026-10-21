@@ -1,6 +1,9 @@
+using WinRT;
+
 namespace DCSMyWay.Aircraft;
 
-public sealed record ApacheThreat(string? Code, string Name, int EngagementMeters);
+[GeneratedBindableCustomProperty]
+public sealed partial record ApacheThreat(string? Code, string Name, int EngagementMeters);
 
 public static class ApacheThreats
 {

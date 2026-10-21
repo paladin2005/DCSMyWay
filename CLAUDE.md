@@ -56,8 +56,8 @@ A modern, low-memory replacement for DCSTheWay (`C:\Workspace\DCSTheWay`) that i
 
 ## Stack
 
-- .NET 10, WinUI 3 (Windows App SDK 2.5), x64 only
-- Unpackaged and self-contained: the publish folder runs on any PC without installing runtimes
+- .NET 10, WinUI 3 (Windows App SDK 2.5), x64 only. Only the WinUI component packages are referenced (`Microsoft.WindowsAppSDK.WinUI` and `InteractiveExperiences`): the `Microsoft.WindowsAppSDK` metapackage also ships AI, ML, Search, Widgets and DWriteCore (onnxruntime and DirectML alone are about 40 MB)
+- Unpackaged and self-contained: the published exe runs on any PC with Windows 10 2004 or later without installing runtimes
 - No Visual Studio on this machine; everything builds with the `dotnet` CLI
 
 ## Commands
@@ -69,12 +69,15 @@ dotnet publish src/DCSMyWay -c Release
 ```
 
 - Run: `src/DCSMyWay/bin/Debug/net10.0-windows10.0.26100.0/win-x64/DCSMyWay.exe`
-- Publish output: `src/DCSMyWay/bin/Release/net10.0-windows10.0.26100.0/win-x64/publish/`
+- Publish output: `dist/DCSMyWay.exe` (git-ignored; `bin/Release` only holds the intermediate build), a single compressed exe (about 37 MB) that is the whole distribution: no installer, the app installs its DCS scripts itself
 - Validate changes with `dotnet build`; ask the user to confirm anything visual
 
 ## Gotchas
 
 - Keep `EnableMsixTooling` on even though the app is unpackaged: without it `dotnet publish` leaves out the app's `.pri`/gh
+- Release publishes as a single file (`PublishSingleFile` with `IncludeAllContentForSelfExtract`, supported for unpackaged self-contained WinUI since Windows App SDK 1.5): the exe extracts everything to `%TEMP%\.net\DCSMyWay\<hash>` on first launch and `AppContext.BaseDirectory` points there. Windows App SDK generates the exe manifest with DLL redirection only when `PublishSingleFile` is set, and MSBuild reuses a manifest left in `obj/Release` by a build without it, which crashes at startup with `ClassFactory cannot supply requested class`: delete `obj/Release` after changing these properties
+- Release is trimmed, so everything handed to WinUI must be trim safe: `AllowUnsafeBlocks` lets CsWinRT generate the vtables of generic collections like `ObservableCollection<WaypointItem>` (without it the trimmed exe crashes setting `ItemsSource`), classes passed to WinUI are `partial`, and types read by reflection bindings (`DisplayMemberPath`) carry `[GeneratedBindableCustomProperty]`. `-p:CsWinRTAotWarningLevel=2` lists the problems at build time
+- WinUI copies its `.mui` translations for about 90 languages; the `RemoveNonEnglishMuiFiles` target keeps only `en-us`
 - Don't use `RuntimeInfo.AsString`: in self-contained mode it throws trying to load `Microsoft.WindowsAppRuntime.Insights.Resource.dll`
 - Resolve file paths from `AppContext.BaseDirectory`, never from the working directory
 - The theme setting (System/Light/Dark) is applied per window by `WindowInterop.SetTheme`: `RequestedTheme` on the window's root element plus `AppWindow.TitleBar.PreferredTheme` for the caption buttons, which do not follow the XAML theme
@@ -101,7 +104,8 @@ dotnet publish src/DCSMyWay -c Release
 
 ## DCS scripts
 
-- `dcs/Scripts/` mirrors `Saved Games\DCS\Scripts\` and holds two scripts, installed by copying `dcs/Scripts/*` there:
+- `dcs/` is copied next to the exe as `DCS\` and mirrors a DCS write folder. On every start the app installs it (`DcsScripts`) into each write folder `DcsFolders` finds: `Saved Games` (the known folder, which can be moved) plus `DCS` or `DCS.<dcs_variant.txt>` for every install under `HKCU\Software\Eagle Dynamics` (`Path`), falling back to every `Saved Games\DCS` or `DCS.*` folder with a `Config` folder (`DCS_F4E` and `DCS_OH58D` are module data, not write folders). It copies the files that are missing or differ, appends the `Export.lua` line unless a line not commented out already loads `DCSMyWayExport.lua`, and appends a block to `Config\autoexec.cfg` that adds `"userhooks"` and `"mission"` to the `net` lists unless they are already listed (DCS allows none by default). The InfoBar says what changed and whether DCS (hook, GUI files, autoexec) or only the mission (export script) must restart. Settings > "Remove from DCS" deletes the shipped files, the empty folders they leave and only the lines the app added, then closes the app; files are edited as Latin-1 so every other byte stays the same
+- `dcs/Scripts/` mirrors `Saved Games\DCS\Scripts\` and holds two scripts:
   - `Hooks/DCSMyWay-hook.lua` loads `DCSMyWay/DCSMyWay.lua` into the DCS GUI Lua state at DCS startup (restart DCS after changing it). It owns everything visual and camera related: crosshair overlay, accept button, status text, camera position and map drawing
   - `DCSMyWay/DCSMyWayExport.lua` runs in the export Lua state, loaded by one line appended to the user's `Export.lua` (reloaded on every mission). It owns the cockpit: reads the active steerpoint (F-16 DED `list_indication(6)`, Hornet HSI, A-10 CDU, Apache TSD, Ka-50 PVI-800, Mirage F1EE PCN) and the seat of two-seat aircraft and runs transfers with `GetDevice(...):performClickableAction`. It chains the `LuaExport*` functions of the scripts loaded before it
   - The split exists because multiplayer clients cannot reach the export state from a hook (`net.dostring_in` returns nothing there), while the export state works everywhere, like TheWay and DCS-BIOS

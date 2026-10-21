@@ -53,7 +53,7 @@ public sealed partial class MainPage : Page
     return $"{cockpit.LatitudeHemisphere} {cockpit.Latitude}   {cockpit.LongitudeHemisphere} {cockpit.Longitude}   {cockpit.ElevationFeet} ft";
   }
 
-  private void OnLoaded(object sender, RoutedEventArgs e)
+  private async void OnLoaded(object sender, RoutedEventArgs e)
   {
     App.DcsListener.MarkReceived += OnMarkReceived;
     _refreshTimer = DispatcherQueue.CreateTimer();
@@ -61,6 +61,40 @@ public sealed partial class MainPage : Page
     _refreshTimer.Tick += async (_, _) => await OnRefreshTickAsync();
     _refreshTimer.Start();
     Refresh();
+    await InstallDcsScriptsAsync();
+  }
+
+  private async Task InstallDcsScriptsAsync()
+  {
+    var folders = await DcsFolders.FindAsync();
+    if (folders.Count == 0)
+    {
+      ShowMessage(InfoBarSeverity.Warning, "DCS was not found in Saved Games. Start DCS once, then restart DCSMyWay");
+      return;
+    }
+
+    var changes = new List<string>();
+    var changedFolders = new List<string>();
+    try
+    {
+      foreach (var folder in folders)
+      {
+        var folderChanges = await App.DcsScripts.InstallAsync(folder);
+        if (folderChanges.Count == 0) continue;
+        changes.AddRange(folderChanges);
+        changedFolders.Add($@"Saved Games\{Path.GetFileName(folder)}");
+      }
+    }
+    catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+    {
+      ShowMessage(InfoBarSeverity.Error, $"The DCS scripts could not be installed: {e.Message}");
+      return;
+    }
+    if (changes.Count == 0) return;
+
+    var verb = changes.Contains(DcsScripts.ExportLua) ? "installed" : "updated";
+    var restart = DcsScripts.NeedsDcsRestart(changes) ? "Restart DCS if it is running" : "Restart the mission if one is running";
+    ShowMessage(InfoBarSeverity.Success, $"DCSMyWay {verb} its scripts in {string.Join(" and ", changedFolders)}. {restart}");
   }
 
   private void OnUnloaded(object sender, RoutedEventArgs e)

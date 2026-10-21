@@ -13,6 +13,7 @@ internal static class NativeMethods
   public const int WmSysKeyDown = 0x0104;
   public const int WmSysKeyUp = 0x0105;
   public const uint LlkhfInjected = 0x10;
+  public static readonly Guid SavedGamesFolder = new("4C5C32FF-BB9D-43B0-B5B4-2D72E54EAAA4");
 
   public delegate nint LowLevelKeyboardProc(int code, nint message, nint data);
 
@@ -60,4 +61,7 @@ internal static class NativeMethods
 
   [DllImport("kernel32.dll", EntryPoint = "GetModuleHandleW", CharSet = CharSet.Unicode)]
   public static extern nint GetModuleHandle(string? moduleName);
+
+  [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+  public static extern int SHGetKnownFolderPath([MarshalAs(UnmanagedType.LPStruct)] Guid folderId, uint flags, nint token, out string path);
 }
