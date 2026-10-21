@@ -204,6 +204,24 @@ public class DcsProtocolTests
   }
 
   [Fact]
+  public void SendsTheThreatNameAndEngagementRingOfThreats()
+  {
+    Waypoint[] waypoints =
+    [
+      new(1, "T1", 41.5, 43.5, 10, IsTarget: true, Threat: "8"),
+      new(2, "T2", 41.6, 43.6, 10, IsTarget: true, Threat: "SR"),
+      new(3, "W3", 41.7, 43.7, 10, Threat: "8"),
+    ];
+
+    var command = DcsProtocol.CreateRouteCommand(waypoints);
+
+    Assert.Equal(
+      """{"type":"route","points":[{"name":"T1 SA-8","lat":41.5,"lon":43.5,"target":true,"ring":10300},""" +
+      """{"name":"T2 Search radar","lat":41.6,"lon":43.6,"target":true},{"name":"W3","lat":41.7,"lon":43.7}]}""",
+      command);
+  }
+
+  [Fact]
   public void SerializesAnEmptyRouteToClearTheMap()
   {
     Assert.Equal("""{"type":"route","points":[]}""", DcsProtocol.CreateRouteCommand([]));

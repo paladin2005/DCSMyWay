@@ -15,7 +15,6 @@ public static class AH64
   private const int L6 = 3019;
   private const int R1 = 3007;
   private const int Clear = 3001;
-  private const int Backspace = 3002;
   private const int Enter = 3006;
   private const int Delay = 100;
   private const int PageTimeout = 1000;
@@ -29,6 +28,7 @@ public static class AH64
   private const string AddIndexElement = "^ADDWaypointStatusWindowPOINT_text_1$";
   private const string AddTypeElement = "^ADDWaypointStatusWindowPOINT_text_2$";
   private const string ReviewIndexElement = "^ActiveWaypointStatusWindowPOINT_text_1$";
+  private const string ReviewIdentifierElement = "^ActiveWaypointStatusWindowPOINT_text_2$";
   private const string ReviewFreeTextElement = "^ActiveWaypointStatusWindowPOINT_text_3$";
   private const string ReviewMgrsElement = "^ActiveWaypointStatusWindowPOINT_text_8$";
   private const string ReviewAltitudeElement = "^ActiveWaypointStatusWindowPOINT_text_13$";
@@ -61,16 +61,13 @@ public static class AH64
   public static TransferSequence CreateTransfer(IEnumerable<Waypoint> waypoints, int startWaypoint, int? seat)
   {
     var station = seat == CpgSeat ? Cpg : Pilot;
-    var steps = new List<CockpitStep>
-    {
-      new(station.MpdButton(TsdButton)),
-      station.PageStep(PointButton, "^PB13_%d+_b$", "The MPD did not open TSD > POINT"),
-    };
+    var steps = new List<CockpitStep>();
     var waypointEnteredAfter = new List<int>();
     var steerpoints = new List<int?>();
     var number = startWaypoint;
     foreach (var waypoint in waypoints)
     {
+      OpenPointPage(steps, station);
       if (waypoint.IsTarget)
       {
         EnterTarget(steps, station, waypoint);
@@ -79,16 +76,21 @@ public static class AH64
       else
       {
         EnterPoint(steps, station, waypoint, number);
+        AddToRoute(steps, station, number);
         steerpoints.Add(number++);
       }
 
       waypointEnteredAfter.Add(steps.Count);
     }
 
-    var routePoints = steerpoints.OfType<int>().ToList();
-    if (routePoints.Count > 0) AddToRoute(steps, station, routePoints);
     steps.Add(new(station.MpdButton(TsdButton)));
     return new TransferSequence(steps, waypointEnteredAfter, steerpoints);
+  }
+
+  private static void OpenPointPage(List<CockpitStep> steps, CrewStation station)
+  {
+    steps.Add(new(station.MpdButton(TsdButton)) { Unless = [station.Mpd("^PB13_%d+_b$")] });
+    steps.Add(station.PageStep(PointButton, "^PB13_%d+_b$", "The MPD did not open TSD > POINT"));
   }
 
   private static void EnterTarget(List<CockpitStep> steps, CrewStation station, Waypoint waypoint)
@@ -97,7 +99,7 @@ public static class AH64
     steps.Add(OpenAdd(station));
     steps.Add(new(station.MpdButton(L6))
     {
-      Wait = [station.Mpd(AddTypeElement, "TG")],
+      Wait = [station.Mpd(AddTypeElement, ApacheThreats.TargetIdentifier)],
       Timeout = PageTimeout,
       Failure = "The MPD did not select the TG point type",
     });
@@ -107,8 +109,11 @@ public static class AH64
       Timeout = KeyboardTimeout,
       Failure = $"The KU did not ask for the identifier of target {name}",
     });
-    steps.Add(KeyboardEnter(station, "^FREE:", $"The KU did not accept the TG identifier for {name}"));
+    var identifier = ApacheThreats.Identifier(waypoint.Threat);
+    if (waypoint.Threat is not null) Type(steps, station, identifier, null);
+    steps.Add(KeyboardEnter(station, "^FREE:", $"The KU did not accept the {identifier} identifier for {name}"));
     EnterPointData(steps, station, waypoint, new IndicationCheck(station.MpdIndicator, ReviewIndexElement, "^T%d%d$"));
+    steps.Add(Readback(station, ReviewIdentifierElement, identifier, $"The MPD does not show the {identifier} identifier for {name}"));
   }
 
   private static CockpitStep OpenAdd(CrewStation station) => new(station.MpdButton(L2))
@@ -195,7 +200,7 @@ public static class AH64
     var coordinate = Mgrs.FromLatLon(waypoint.Latitude, waypoint.Longitude);
     var feet = CoordinateFormat.ToFeet(waypoint.ElevationMeters).TrimStart('-');
     var name = waypoint.Name;
-    for (var i = 0; i < FreeTextLength; i++) steps.Add(new(station.KeyboardButton(Backspace)));
+    steps.Add(KeyboardClear(station, "^FREE:#?$"));
     Type(steps, station, freeText, null);
     steps.Add(KeyboardEnter(station, "^UTM LAT/LONG:", $"The KU did not accept the text of {name}"));
     steps.Add(KeyboardClear(station, "^UTM LAT/LONG:#?$"));
@@ -214,51 +219,49 @@ public static class AH64
     steps.Add(Readback(station, ReviewFreeTextElement, freeText, $"The MPD does not show the text entered for {name}"));
   }
 
-  private static void AddToRoute(List<CockpitStep> steps, CrewStation station, List<int> numbers)
+  private static void AddToRoute(List<CockpitStep> steps, CrewStation station, int number)
   {
+    steps.Add(new(station.MpdButton(TsdButton)));
     steps.Add(station.PageStep(RouteButton, "^PB14_%d+_b$", "The MPD did not open TSD > RTE"));
-    foreach (var number in numbers)
+    var index = PointIndex(number);
+    var inRoute = string.Create(CultureInfo.InvariantCulture, $"^..{number:00}$");
+    steps.Add(new(station.MpdButton(L2))
     {
-      var index = PointIndex(number);
-      var inRoute = string.Create(CultureInfo.InvariantCulture, $"^..{number:00}$");
-      steps.Add(new(station.MpdButton(L2))
-      {
-        Until = [station.Mpd("^PB23_%d+_b$")],
-        Timeout = PageTimeout,
-        Failure = "The MPD did not open RTE > ADD",
-      });
-      steps.Add(new(station.MpdButton(L1))
-      {
-        Wait = [station.Keyboard("^POINT:")],
-        Timeout = KeyboardTimeout,
-        Failure = $"The KU did not ask for the point to add {index} to the route",
-      });
-      Type(steps, station, index, null);
-      steps.Add(new(station.KeyboardButton(Enter))
-      {
-        Wait = [station.Mpd("^PB24_%d+$", index)],
-        Timeout = KeyboardTimeout,
-        Failure = $"The MPD did not take {index} to add it to the route",
-      });
-      steps.Add(new(null)
-      {
-        Options =
-        [
-          .. RouteRowElements.Select(row => new StepOption(new(station.MpdIndicator, row, inRoute), station.MpdButton(L2))),
-          .. RouteRowElements.Select((row, i) => new StepOption(station.Mpd(row, "END"), station.MpdButton(RouteRowButtons[i]))),
-        ],
-        Otherwise = station.MpdButton(R1),
-        Tries = RouteScrolls,
-        Timeout = RouteScrollTimeout,
-        Failure = $"Could not find the end of the route to add {index}",
-      });
-      steps.Add(new(null)
-      {
-        Wait = [.. RouteRowElements.Select(row => new IndicationCheck(station.MpdIndicator, row, inRoute))],
-        Timeout = PageTimeout,
-        Failure = $"{index} did not appear in the route",
-      });
-    }
+      Until = [station.Mpd("^PB23_%d+_b$")],
+      Timeout = PageTimeout,
+      Failure = "The MPD did not open RTE > ADD",
+    });
+    steps.Add(new(station.MpdButton(L1))
+    {
+      Wait = [station.Keyboard("^POINT:")],
+      Timeout = KeyboardTimeout,
+      Failure = $"The KU did not ask for the point to add {index} to the route",
+    });
+    Type(steps, station, index, null);
+    steps.Add(new(station.KeyboardButton(Enter))
+    {
+      Wait = [station.Mpd("^PB24_%d+$", index)],
+      Timeout = KeyboardTimeout,
+      Failure = $"The MPD did not take {index} to add it to the route",
+    });
+    steps.Add(new(null)
+    {
+      Options =
+      [
+        .. RouteRowElements.Select(row => new StepOption(new(station.MpdIndicator, row, inRoute), station.MpdButton(L2))),
+        .. RouteRowElements.Select((row, i) => new StepOption(station.Mpd(row, "END"), station.MpdButton(RouteRowButtons[i]))),
+      ],
+      Otherwise = station.MpdButton(R1),
+      Tries = RouteScrolls,
+      Timeout = RouteScrollTimeout,
+      Failure = $"Could not find the end of the route to add {index}",
+    });
+    steps.Add(new(null)
+    {
+      Wait = [.. RouteRowElements.Select(row => new IndicationCheck(station.MpdIndicator, row, inRoute))],
+      Timeout = PageTimeout,
+      Failure = $"{index} did not appear in the route",
+    });
   }
 
   private static CockpitStep KeyboardEnter(CrewStation station, string nextPrompt, string failure) =>

@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using DCSMyWay.Aircraft;
 using DCSMyWay.Models;
 
 namespace DCSMyWay.Services;
@@ -101,9 +102,17 @@ public static class DcsProtocol
   public static string CreateStatusCommand(string text) =>
     JsonSerializer.Serialize(new StatusCommand("status", text), DcsJsonContext.Default.StatusCommand);
 
+  private static RoutePoint CreateRoutePoint(Waypoint waypoint)
+  {
+    if (!waypoint.IsTarget) return new RoutePoint(waypoint.Name, waypoint.Latitude, waypoint.Longitude, null, null);
+    var threat = ApacheThreats.Find(waypoint.Threat);
+    var name = threat.Code is null ? waypoint.Name : $"{waypoint.Name} {threat.Name}";
+    return new RoutePoint(name, waypoint.Latitude, waypoint.Longitude, true, threat.EngagementMeters > 0 ? threat.EngagementMeters : null);
+  }
+
   public static string CreateRouteCommand(IEnumerable<Waypoint> waypoints)
   {
-    var points = waypoints.Select(w => new RoutePoint(w.Name, w.Latitude, w.Longitude, w.IsTarget ? true : null)).ToList();
+    var points = waypoints.Select(CreateRoutePoint).ToList();
     return JsonSerializer.Serialize(new RouteCommand("route", points), DcsJsonContext.Default.RouteCommand);
   }
 }
@@ -157,4 +166,4 @@ internal sealed record StatusCommand(string Type, string Text);
 
 internal sealed record RouteCommand(string Type, List<RoutePoint> Points);
 
-internal sealed record RoutePoint(string Name, double Lat, double Lon, bool? Target);
+internal sealed record RoutePoint(string Name, double Lat, double Lon, bool? Target, int? Ring);
