@@ -30,7 +30,7 @@ public static class DcsProtocol
 
     if (incoming?.Type == "cockpit")
     {
-      var cockpit = new CockpitState(incoming.Model, incoming.Steerpoint, incoming.Busy == true, incoming.TransferId, incoming.Done ?? 0, incoming.Failed);
+      var cockpit = new CockpitState(incoming.Model, incoming.Steerpoint, incoming.Busy == true, incoming.TransferId, incoming.Done ?? 0, incoming.Failed, incoming.Seat);
       message = new DcsMessage(DcsMessageType.Cockpit, null, cockpit);
       return true;
     }
@@ -72,7 +72,8 @@ public static class DcsProtocol
     step.IsChecked ? step.Timeout : null,
     step.Failure,
     step.Options?.Select(CreateOptionCommand).ToList(),
-    step.Otherwise is { } otherwise ? CreatePressCommand(otherwise) : null);
+    step.Otherwise is { } otherwise ? CreatePressCommand(otherwise) : null,
+    CreateCheckCommands(step.Unless));
 
   private static OptionCommand CreateOptionCommand(StepOption option) => new(
     CreateCheckCommand(option.When),
@@ -119,7 +120,8 @@ internal sealed record IncomingMessage(
   int? Steerpoint,
   int? TransferId,
   int? Done,
-  string? Failed);
+  string? Failed,
+  int? Seat);
 
 internal sealed record WaypointsCommand(string Type, int Id, List<StepCommand> Steps);
 
@@ -136,7 +138,8 @@ internal sealed record StepCommand(
   int? Timeout,
   string? Failure,
   List<OptionCommand>? Options,
-  PressCommand? Otherwise);
+  PressCommand? Otherwise,
+  List<CheckCommand>? Unless);
 
 internal sealed record OptionCommand(CheckCommand When, int? Device, int? Code, int? Delay, double? Activate, bool? Depress);
 

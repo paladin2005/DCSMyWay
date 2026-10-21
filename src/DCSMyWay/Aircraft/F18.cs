@@ -53,7 +53,7 @@ public static class F18
     1,
     LastWaypoint,
     "Show the HSI on a display so DCSMyWay can read the selected waypoint",
-    (waypoints, start) => CreateTransfer(waypoints.Select(Format), start));
+    (waypoints, start, _) => CreateTransfer(waypoints.Select(Format), start));
 
   public static CockpitWaypoint Format(Waypoint waypoint) => new(
     waypoint.Name,

@@ -42,7 +42,7 @@ public static class F16
     1,
     99,
     "Put the DED on its main page so DCSMyWay can read the active steerpoint",
-    (waypoints, start) => CreateTransfer(waypoints.Select(Format), start));
+    (waypoints, start, _) => CreateTransfer(waypoints.Select(Format), start));
 
   public static CockpitWaypoint Format(Waypoint waypoint) => new(
     waypoint.Name,

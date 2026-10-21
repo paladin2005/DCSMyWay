@@ -42,7 +42,8 @@ public sealed class DcsListener(int port) : IDisposable
         cockpit?.ActiveSteerpoint,
         cockpit?.TransferId,
         cockpit?.PressesDone ?? 0,
-        cockpit?.TransferFailure);
+        cockpit?.TransferFailure,
+        cockpit?.Seat);
     }
   }
 

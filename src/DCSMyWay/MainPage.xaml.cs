@@ -5,6 +5,7 @@ using DCSMyWay.Services;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
 
 namespace DCSMyWay;
@@ -85,9 +86,9 @@ public sealed partial class MainPage : Page
     ShowTransferFailure(state);
     var cancelling = IsTransferInProgress || state?.IsEnteringWaypoints == true;
     ShowTransferButton(cancelling);
-    TransferButton.IsEnabled = state is not null
-      && (cancelling || _items.Count > 0)
-      && DateTimeOffset.UtcNow - _transferClickedUtc > DcsSyncDelay;
+    var settled = DateTimeOffset.UtcNow - _transferClickedUtc > DcsSyncDelay;
+    TransferButton.IsEnabled = state is not null && !cancelling && _items.Count > 0 && settled;
+    CancelTransferButton.IsEnabled = state is not null && cancelling && settled;
     ClearButton.IsEnabled = _items.Count > 0;
     if (state is not null) _transferHistory.UpdateProgress(state.TransferId, state.PressesDone);
     RefreshTransferMarks(state?.AircraftId);
@@ -95,11 +96,16 @@ public sealed partial class MainPage : Page
 
   private void ShowTransferButton(bool cancelling)
   {
-    TransferText.Opacity = cancelling ? 0 : 1;
-    CancelTransferText.Opacity = cancelling ? 1 : 0;
-    AutomationProperties.SetName(TransferButton, cancelling ? CancelTransferText.Text : TransferText.Text);
-    var style = (Style)Application.Current.Resources[cancelling ? "DefaultButtonStyle" : "AccentButtonStyle"];
-    if (TransferButton.Style != style) TransferButton.Style = style;
+    ShowOverlappingButton(TransferButton, !cancelling);
+    ShowOverlappingButton(CancelTransferButton, cancelling);
+  }
+
+  private static void ShowOverlappingButton(Control button, bool visible)
+  {
+    button.Opacity = visible ? 1 : 0;
+    button.IsHitTestVisible = visible;
+    button.IsTabStop = visible;
+    AutomationProperties.SetAccessibilityView(button, visible ? AccessibilityView.Content : AccessibilityView.Raw);
   }
 
   private void ShowDcsState(DcsState? state)
@@ -167,15 +173,32 @@ public sealed partial class MainPage : Page
     ShowMessage(InfoBarSeverity.Error, "DCS is not reachable");
   }
 
-  private async void TransferButton_Click(object sender, RoutedEventArgs e)
+  private async void TransferButton_Click(SplitButton sender, SplitButtonClickEventArgs args) => await TransferAsync(null);
+
+  private async void OverwriteFromActiveItem_Click(object sender, RoutedEventArgs e) => await TransferAsync(true);
+
+  private async void AddAfterActiveItem_Click(object sender, RoutedEventArgs e) => await TransferAsync(false);
+
+  private async void CancelTransferButton_Click(object sender, RoutedEventArgs e) => await CancelTransferAsync();
+
+  private void TransferMenu_Opening(object sender, object e)
   {
     var state = App.DcsListener.Latest;
-    if (IsTransferInProgress || state?.IsEnteringWaypoints == true)
-    {
-      await CancelTransferAsync();
-      return;
-    }
+    var aircraft = SupportedAircraft.Find(state?.Position.Module);
+    var active = state?.ActiveSteerpoint;
+    var steerpoint = active is { } number
+      ? $"{aircraft?.SteerpointLabel ?? "STPT"} {number}"
+      : $"the active {aircraft?.SteerpointName ?? "steerpoint"}";
+    OverwriteFromActiveItem.Text = $"Overwrite from {steerpoint}";
+    AddAfterActiveItem.Text = $"Add after {steerpoint}";
+    OverwriteFromActiveItem.IsEnabled = active is not null;
+    AddAfterActiveItem.IsEnabled = active is not null;
+  }
 
+  private async Task TransferAsync(bool? startAtActive)
+  {
+    var state = App.DcsListener.Latest;
+    if (IsTransferInProgress || state?.IsEnteringWaypoints == true) return;
     var aircraft = SupportedAircraft.Find(state?.Position.Module);
     if (state is null || aircraft is null)
     {
@@ -193,7 +216,19 @@ public sealed partial class MainPage : Page
     var pending = _transferHistory.Pending(state.AircraftId, waypoints);
     var again = pending.Waypoints.Count == 0;
     int start;
-    if (again)
+    if (startAtActive is { } atActive)
+    {
+      if (state.ActiveSteerpoint is not { } active)
+      {
+        ShowMessage(InfoBarSeverity.Warning, aircraft.SteerpointHint);
+        return;
+      }
+
+      start = Math.Max(atActive ? active : active + 1, aircraft.FirstSteerpoint);
+      if (again) pending = new PendingTransfer(waypoints, start);
+      again = false;
+    }
+    else if (again)
     {
       start = _transferHistory.SteerpointOf(state.AircraftId, waypoints[0]) ?? aircraft.FirstSteerpoint;
       pending = new PendingTransfer(waypoints, start);
@@ -204,7 +239,7 @@ public sealed partial class MainPage : Page
     }
     else if (state.ActiveSteerpoint is { } active)
     {
-      start = Math.Max(App.Settings.Current.StartAtActiveSteerpoint ? active : active + 1, aircraft.FirstSteerpoint);
+      start = Math.Max(active, aircraft.FirstSteerpoint);
     }
     else
     {
@@ -221,7 +256,7 @@ public sealed partial class MainPage : Page
     if (again && !await ConfirmTransferAgainAsync(aircraft, start)) return;
     _transferClickedUtc = DateTimeOffset.UtcNow;
     TransferButton.IsEnabled = false;
-    var sequence = aircraft.CreateTransfer(pending.Waypoints, start);
+    var sequence = aircraft.CreateTransfer(pending.Waypoints, start, state.Seat);
     var transferId = _nextTransferId++;
     if (await App.DcsSender.SendWaypointsAsync(transferId, sequence.Steps))
     {
@@ -252,7 +287,7 @@ public sealed partial class MainPage : Page
   private async Task CancelTransferAsync()
   {
     _transferClickedUtc = DateTimeOffset.UtcNow;
-    TransferButton.IsEnabled = false;
+    CancelTransferButton.IsEnabled = false;
     if (!await App.DcsSender.CancelWaypointsAsync())
     {
       ShowMessage(InfoBarSeverity.Error, "DCS is not reachable");
