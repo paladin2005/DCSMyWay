@@ -13,10 +13,12 @@ public class TransferHistoryTests
   private static readonly Waypoint W4 = new(4, "W4", 42.5, 44.3, 90);
   private static readonly int[] EnteredAfter = [30, 60, 90];
 
+  private static List<int?> From(int start, int count) => [.. Enumerable.Range(start, count).Select(n => (int?)n)];
+
   private static TransferHistory Entered(int start, params Waypoint[] route)
   {
     var history = new TransferHistory();
-    history.Record(Aircraft, 1, route, start, EnteredAfter);
+    history.Record(Aircraft, 1, route, From(start, route.Length), EnteredAfter);
     history.UpdateProgress(1, 90);
     return history;
   }
@@ -35,7 +37,7 @@ public class TransferHistoryTests
   {
     var history = new TransferHistory();
 
-    history.Record(Aircraft, 1, [W1, W2, W3], 1, EnteredAfter);
+    history.Record(Aircraft, 1, [W1, W2, W3], From(1, 3), EnteredAfter);
     history.UpdateProgress(1, 0);
 
     Assert.False(history.IsEntered(Aircraft, W1));
@@ -45,7 +47,7 @@ public class TransferHistoryTests
   public void MarksEachWaypointWithItsSteerpointAsSoonAsItsPressesAreDone()
   {
     var history = new TransferHistory();
-    history.Record(Aircraft, 1, [W1, W2, W3], 5, EnteredAfter);
+    history.Record(Aircraft, 1, [W1, W2, W3], From(5, 3), EnteredAfter);
 
     history.UpdateProgress(1, 29);
     Assert.False(history.IsEntered(Aircraft, W1));
@@ -63,7 +65,7 @@ public class TransferHistoryTests
   public void IgnoresProgressFromAnotherTransfer()
   {
     var history = new TransferHistory();
-    history.Record(Aircraft, 2, [W1, W2, W3], 1, EnteredAfter);
+    history.Record(Aircraft, 2, [W1, W2, W3], From(1, 3), EnteredAfter);
 
     history.UpdateProgress(1, 90);
     history.UpdateProgress(null, 90);
@@ -86,7 +88,7 @@ public class TransferHistoryTests
   public void ACancelledTransferResumesAtTheFirstWaypointThatDidNotGetIn()
   {
     var history = new TransferHistory();
-    history.Record(Aircraft, 1, [W1, W2, W3], 1, EnteredAfter);
+    history.Record(Aircraft, 1, [W1, W2, W3], From(1, 3), EnteredAfter);
     history.UpdateProgress(1, 65);
 
     var pending = history.Pending(Aircraft, [W1, W2, W3]);
@@ -119,7 +121,7 @@ public class TransferHistoryTests
   {
     var history = Entered(1, W1, W2);
 
-    history.Record(Aircraft, 2, [W3], 3, [30]);
+    history.Record(Aircraft, 2, [W3], From(3, 1), [30]);
     history.UpdateProgress(2, 30);
 
     Assert.Equal(1, history.SteerpointOf(Aircraft, W1));
@@ -131,7 +133,7 @@ public class TransferHistoryTests
   {
     var history = Entered(1, W1, W2);
 
-    history.Record(Aircraft, 2, [W1, W2], 1, [30, 60]);
+    history.Record(Aircraft, 2, [W1, W2], From(1, 2), [30, 60]);
     Assert.False(history.IsEntered(Aircraft, W1));
 
     history.UpdateProgress(2, 30);
@@ -154,7 +156,7 @@ public class TransferHistoryTests
   {
     var history = Entered(1, W1);
 
-    history.Record(NewAircraft, 2, [W2], 1, [30]);
+    history.Record(NewAircraft, 2, [W2], From(1, 1), [30]);
 
     Assert.False(history.IsEntered(Aircraft, W1));
     Assert.False(history.IsEntered(NewAircraft, W1));
@@ -166,7 +168,7 @@ public class TransferHistoryTests
     var history = new TransferHistory();
     var route = new List<Waypoint> { W1 };
 
-    history.Record(Aircraft, 1, route, 1, EnteredAfter);
+    history.Record(Aircraft, 1, route, From(1, 1), EnteredAfter);
     route.Add(W2);
     history.UpdateProgress(1, 90);
 
@@ -179,7 +181,7 @@ public class TransferHistoryTests
   {
     var history = new TransferHistory();
 
-    history.Record(null, 1, [W1], 7, EnteredAfter);
+    history.Record(null, 1, [W1], From(7, 1), EnteredAfter);
     history.UpdateProgress(1, 30);
 
     Assert.Equal(7, history.SteerpointOf(null, W1));
@@ -194,5 +196,52 @@ public class TransferHistoryTests
 
     Assert.False(history.IsEntered(Aircraft, W1));
     Assert.Null(history.Pending(Aircraft, [W1, W2]).StartSteerpoint);
+  }
+
+  [Fact]
+  public void TargetsAreEnteredWithoutUsingASteerpoint()
+  {
+    var history = new TransferHistory();
+    history.Record(Aircraft, 1, [W1, W2, W3], [5, null, 6], EnteredAfter);
+
+    history.UpdateProgress(1, 90);
+
+    Assert.True(history.IsEntered(Aircraft, W2));
+    Assert.Null(history.SteerpointOf(Aircraft, W2));
+    Assert.Equal(6, history.SteerpointOf(Aircraft, W3));
+  }
+
+  [Fact]
+  public void NewWaypointsAfterATargetFollowTheLastEnteredSteerpoint()
+  {
+    var history = new TransferHistory();
+    history.Record(Aircraft, 1, [W1, W2, W3], [5, null, null], EnteredAfter);
+    history.UpdateProgress(1, 90);
+
+    var pending = history.Pending(Aircraft, [W1, W2, W3, W4]);
+
+    Assert.Equal([W4], pending.Waypoints);
+    Assert.Equal(6, pending.StartSteerpoint);
+  }
+
+  [Fact]
+  public void OnlyTargetsEnteredLeaveTheStartToTheActiveSteerpoint()
+  {
+    var history = new TransferHistory();
+    history.Record(Aircraft, 1, [W1], [null], EnteredAfter);
+    history.UpdateProgress(1, 90);
+
+    Assert.Null(history.Pending(Aircraft, [W1, W2]).StartSteerpoint);
+    Assert.Null(history.FirstSteerpoint(Aircraft, [W1, W2, W3]));
+  }
+
+  [Fact]
+  public void TheFirstSteerpointSkipsTargets()
+  {
+    var history = new TransferHistory();
+    history.Record(Aircraft, 1, [W1, W2], [null, 8], [30, 60]);
+    history.UpdateProgress(1, 60);
+
+    Assert.Equal(8, history.FirstSteerpoint(Aircraft, [W1, W2]));
   }
 }

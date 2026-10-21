@@ -99,4 +99,15 @@ public class F16Tests
 
     Assert.All(steps, step => Assert.False(step.IsChecked));
   }
+
+  [Fact]
+  public void NumbersEveryWaypointFromTheStart()
+  {
+    var waypoints = TheWayFixture.Load("F16.json").Waypoints!.Select(w => w.ToCockpitWaypoint()).ToList();
+
+    var sequence = F16.CreateTransfer(waypoints, 24);
+
+    Assert.Equal(Enumerable.Range(sequence.Steerpoints[0]!.Value, sequence.Steerpoints.Count).Select(n => (int?)n), sequence.Steerpoints);
+    Assert.Equal(sequence.WaypointEnteredAfter.Count, sequence.Steerpoints.Count);
+  }
 }

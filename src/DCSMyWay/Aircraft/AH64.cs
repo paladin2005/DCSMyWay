@@ -12,6 +12,7 @@ public static class AH64
   private const int L1 = 3024;
   private const int L2 = 3023;
   private const int L3 = 3022;
+  private const int L6 = 3019;
   private const int R1 = 3007;
   private const int Clear = 3001;
   private const int Backspace = 3002;
@@ -47,7 +48,10 @@ public static class AH64
     1,
     LastWaypoint,
     "Show the TSD in NAV phase on one of your MPDs so DCSMyWay can read the current waypoint",
-    CreateTransfer);
+    CreateTransfer)
+  {
+    SupportsTargets = true,
+  };
 
   public static string FreeText(string name) =>
     new([.. name.Where(char.IsAsciiLetterOrDigit).Take(FreeTextLength).Select(char.ToUpperInvariant)]);
@@ -63,36 +67,65 @@ public static class AH64
       station.PageStep(PointButton, "^PB13_%d+_b$", "The MPD did not open TSD > POINT"),
     };
     var waypointEnteredAfter = new List<int>();
-    var numbers = new List<int>();
+    var steerpoints = new List<int?>();
     var number = startWaypoint;
     foreach (var waypoint in waypoints)
     {
-      EnterPoint(steps, station, waypoint, number);
+      if (waypoint.IsTarget)
+      {
+        EnterTarget(steps, station, waypoint);
+        steerpoints.Add(null);
+      }
+      else
+      {
+        EnterPoint(steps, station, waypoint, number);
+        steerpoints.Add(number++);
+      }
+
       waypointEnteredAfter.Add(steps.Count);
-      numbers.Add(number++);
     }
 
-    AddToRoute(steps, station, numbers);
+    var routePoints = steerpoints.OfType<int>().ToList();
+    if (routePoints.Count > 0) AddToRoute(steps, station, routePoints);
     steps.Add(new(station.MpdButton(TsdButton)));
-    return new TransferSequence(steps, waypointEnteredAfter);
+    return new TransferSequence(steps, waypointEnteredAfter, steerpoints);
   }
+
+  private static void EnterTarget(List<CockpitStep> steps, CrewStation station, Waypoint waypoint)
+  {
+    var name = waypoint.Name;
+    steps.Add(OpenAdd(station));
+    steps.Add(new(station.MpdButton(L6))
+    {
+      Wait = [station.Mpd(AddTypeElement, "TG")],
+      Timeout = PageTimeout,
+      Failure = "The MPD did not select the TG point type",
+    });
+    steps.Add(new(station.MpdButton(L1))
+    {
+      Wait = [station.Keyboard("^IDENT:")],
+      Timeout = KeyboardTimeout,
+      Failure = $"The KU did not ask for the identifier of target {name}",
+    });
+    steps.Add(KeyboardEnter(station, "^FREE:", $"The KU did not accept the TG identifier for {name}"));
+    EnterPointData(steps, station, waypoint, new IndicationCheck(station.MpdIndicator, ReviewIndexElement, "^T%d%d$"));
+  }
+
+  private static CockpitStep OpenAdd(CrewStation station) => new(station.MpdButton(L2))
+  {
+    Until = [station.Mpd("^PB24_%d+$", "IDENT>")],
+    Timeout = PageTimeout,
+    Failure = "The MPD did not open POINT > ADD",
+  };
 
   private static void EnterPoint(List<CockpitStep> steps, CrewStation station, Waypoint waypoint, int number)
   {
     var index = PointIndex(number);
-    var freeText = FreeText(waypoint.Name);
-    var coordinate = Mgrs.FromLatLon(waypoint.Latitude, waypoint.Longitude);
-    var feet = CoordinateFormat.ToFeet(waypoint.ElevationMeters).TrimStart('-');
     var name = waypoint.Name;
     var addingPoint = station.Keyboard("^IDENT:");
     var editingText = station.Keyboard("^FREE:");
 
-    steps.Add(new(station.MpdButton(L2))
-    {
-      Until = [station.Mpd("^PB24_%d+$", "IDENT>")],
-      Timeout = PageTimeout,
-      Failure = "The MPD did not open POINT > ADD",
-    });
+    steps.Add(OpenAdd(station));
     steps.Add(new(station.MpdButton(L3))
     {
       Wait = [station.Mpd(AddTypeElement, "WP")],
@@ -153,6 +186,15 @@ public static class AH64
       Timeout = PageTimeout,
       Failure = $"The MPD is not entering {index}",
     });
+    EnterPointData(steps, station, waypoint, station.Mpd(ReviewIndexElement, index));
+  }
+
+  private static void EnterPointData(List<CockpitStep> steps, CrewStation station, Waypoint waypoint, IndicationCheck stored)
+  {
+    var freeText = FreeText(waypoint.Name);
+    var coordinate = Mgrs.FromLatLon(waypoint.Latitude, waypoint.Longitude);
+    var feet = CoordinateFormat.ToFeet(waypoint.ElevationMeters).TrimStart('-');
+    var name = waypoint.Name;
     for (var i = 0; i < FreeTextLength; i++) steps.Add(new(station.KeyboardButton(Backspace)));
     Type(steps, station, freeText, null);
     steps.Add(KeyboardEnter(station, "^UTM LAT/LONG:", $"The KU did not accept the text of {name}"));
@@ -163,7 +205,7 @@ public static class AH64
     Type(steps, station, feet, null);
     steps.Add(new(station.KeyboardButton(Enter))
     {
-      Wait = [station.Mpd(ReviewIndexElement, index)],
+      Wait = [stored],
       Timeout = KeyboardTimeout,
       Failure = $"The KU did not accept the altitude of {name}",
     });

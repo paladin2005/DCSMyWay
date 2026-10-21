@@ -17,6 +17,17 @@ public sealed class WaypointItem(Waypoint waypoint) : INotifyPropertyChanged
     }
   } = waypoint;
 
+  public bool ShowsTargetToggle
+  {
+    get;
+    set
+    {
+      if (field == value) return;
+      field = value;
+      PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowsTargetToggle)));
+    }
+  }
+
   public bool IsTransferred
   {
     get;

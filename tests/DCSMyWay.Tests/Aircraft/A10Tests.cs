@@ -190,4 +190,13 @@ public class A10Tests
     }
     Assert.Equal(flightPlan.Count, flightPlan.IndexOf(searches[^1]) + 2);
   }
+
+  [Fact]
+  public void NumbersEveryWaypointFromTheStart()
+  {
+    var sequence = A10.CreateTransfer(Waypoints, 12);
+
+    Assert.Equal(Enumerable.Range(sequence.Steerpoints[0]!.Value, sequence.Steerpoints.Count).Select(n => (int?)n), sequence.Steerpoints);
+    Assert.Equal(sequence.WaypointEnteredAfter.Count, sequence.Steerpoints.Count);
+  }
 }

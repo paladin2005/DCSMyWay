@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 
 namespace DCSMyWay.Models;
 
-public sealed partial record Waypoint(int Id, string Name, double Latitude, double Longitude, double ElevationMeters)
+public sealed partial record Waypoint(int Id, string Name, double Latitude, double Longitude, double ElevationMeters, bool IsTarget = false)
 {
   public const int MaxNameLength = 12;
 

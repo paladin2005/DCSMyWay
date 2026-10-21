@@ -103,7 +103,7 @@ public static class DcsProtocol
 
   public static string CreateRouteCommand(IEnumerable<Waypoint> waypoints)
   {
-    var points = waypoints.Select(w => new RoutePoint(w.Name, w.Latitude, w.Longitude)).ToList();
+    var points = waypoints.Select(w => new RoutePoint(w.Name, w.Latitude, w.Longitude, w.IsTarget ? true : null)).ToList();
     return JsonSerializer.Serialize(new RouteCommand("route", points), DcsJsonContext.Default.RouteCommand);
   }
 }
@@ -157,4 +157,4 @@ internal sealed record StatusCommand(string Type, string Text);
 
 internal sealed record RouteCommand(string Type, List<RoutePoint> Points);
 
-internal sealed record RoutePoint(string Name, double Lat, double Lon);
+internal sealed record RoutePoint(string Name, double Lat, double Lon, bool? Target);

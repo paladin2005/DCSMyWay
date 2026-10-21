@@ -150,4 +150,46 @@ public class AH64Tests
     Assert.Equal((1, 50), (AH64.Aircraft.FirstSteerpoint, AH64.Aircraft.LastSteerpoint));
     Assert.Equal("W07", AH64.PointIndex(7));
   }
+
+  [Fact]
+  public void EntersTargetsAsNewTgPointsAndKeepsWaypointNumbersForTheRest()
+  {
+    List<Waypoint> waypoints = [Waypoints[0], Waypoints[1] with { IsTarget = true }, Waypoints[2]];
+
+    var sequence = AH64.CreateTransfer(waypoints, 5, 0);
+
+    Assert.Equal([5, null, 6], sequence.Steerpoints);
+    var target = PointSteps(sequence)[1];
+    Assert.Equal(new ButtonPress(43, 3023, 100), target[0].Press);
+    Assert.Equal((3019, "TG"), (target[1].Press!.Code, Assert.Single(Assert.Single(target[1].Wait!).Values!)));
+    Assert.Equal((3024, "^IDENT:"), (target[2].Press!.Code, Assert.Single(target[2].Wait!).Pattern));
+    Assert.Equal((3006, "^FREE:"), (target[3].Press!.Code, Assert.Single(target[3].Wait!).Pattern));
+    Assert.DoesNotContain(target, s => s.Options is not null || s.Unless is not null);
+    Assert.Contains(target, s => s.Wait?.Any(c => c.Element == "^ActiveWaypointStatusWindowPOINT_text_1$" && c.Pattern == "^T%d%d$") == true);
+    Assert.Contains(target, s => s.Wait?.Any(c => c.Element == "^ActiveWaypointStatusWindowPOINT_text_3$" && c.Values![0] == "W2") == true);
+  }
+
+  [Fact]
+  public void LeavesTargetsOutOfTheRoute()
+  {
+    List<Waypoint> waypoints = [Waypoints[0], Waypoints[1] with { IsTarget = true }];
+
+    var sequence = AH64.CreateTransfer(waypoints, 5, 0);
+
+    var searches = sequence.Steps[sequence.WaypointEnteredAfter[^1]..].Where(s => s.Options is not null).ToList();
+    Assert.Equal("^..05$", Assert.Single(searches).Options![0].When.Pattern);
+  }
+
+  [Fact]
+  public void SkipsTheRouteWhenEveryPointIsATarget()
+  {
+    var sequence = AH64.CreateTransfer([Waypoints[0] with { IsTarget = true }], 5, 0);
+
+    Assert.Equal([null], sequence.Steerpoints);
+    Assert.DoesNotContain(sequence.Steps, s => s.Press?.Code == 3014);
+    Assert.Equal(new ButtonPress(43, 3029, 100), sequence.Steps[^1].Press);
+    Assert.True(AH64.Aircraft.SupportsTargets);
+    Assert.False(F16.Aircraft.SupportsTargets);
+  }
 }
+

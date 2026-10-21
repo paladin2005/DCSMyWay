@@ -92,6 +92,8 @@ public sealed partial class MainPage : Page
     ClearButton.IsEnabled = _items.Count > 0;
     if (state is not null) _transferHistory.UpdateProgress(state.TransferId, state.PressesDone);
     RefreshTransferMarks(state?.AircraftId);
+    var supportsTargets = SupportedAircraft.Find(state?.Position.Module)?.SupportsTargets == true;
+    foreach (var item in _items) item.ShowsTargetToggle = supportsTargets;
   }
 
   private void ShowTransferButton(bool cancelling)
@@ -230,7 +232,7 @@ public sealed partial class MainPage : Page
     }
     else if (again)
     {
-      start = _transferHistory.SteerpointOf(state.AircraftId, waypoints[0]) ?? aircraft.FirstSteerpoint;
+      start = _transferHistory.FirstSteerpoint(state.AircraftId, waypoints) ?? aircraft.FirstSteerpoint;
       pending = new PendingTransfer(waypoints, start);
     }
     else if (pending.StartSteerpoint is { } next)
@@ -247,7 +249,8 @@ public sealed partial class MainPage : Page
       return;
     }
 
-    if (start + pending.Waypoints.Count - 1 > aircraft.LastSteerpoint)
+    var sequence = aircraft.CreateTransfer(pending.Waypoints, start, state.Seat);
+    if (sequence.Steerpoints.Max() > aircraft.LastSteerpoint)
     {
       ShowMessage(InfoBarSeverity.Warning, $"These waypoints don't fit: the {aircraft.Name} has {aircraft.SteerpointName}s up to {aircraft.LastSteerpoint}");
       return;
@@ -256,13 +259,12 @@ public sealed partial class MainPage : Page
     if (again && !await ConfirmTransferAgainAsync(aircraft, start)) return;
     _transferClickedUtc = DateTimeOffset.UtcNow;
     TransferButton.IsEnabled = false;
-    var sequence = aircraft.CreateTransfer(pending.Waypoints, start, state.Seat);
     var transferId = _nextTransferId++;
     if (await App.DcsSender.SendWaypointsAsync(transferId, sequence.Steps))
     {
       _sentTransferId = transferId;
-      _transferHistory.Record(state.AircraftId, transferId, pending.Waypoints, start, sequence.WaypointEnteredAfter);
-      _transferMessage = $"Entering {pending.Waypoints.Count} waypoints from {aircraft.SteerpointName} {start}, don't touch the cockpit controls";
+      _transferHistory.Record(state.AircraftId, transferId, pending.Waypoints, sequence.Steerpoints, sequence.WaypointEnteredAfter);
+      _transferMessage = $"Entering {DescribeTransfer(aircraft, sequence, start)}, don't touch the cockpit controls";
       _transferStarted = false;
       ShowMessage(InfoBarSeverity.Informational, _transferMessage);
       await App.DcsSender.SetCrosshairVisibleAsync(false);
@@ -328,6 +330,23 @@ public sealed partial class MainPage : Page
 
   private bool IsNameTaken(string name, WaypointItem? except) =>
     _items.Any(i => i != except && i.Waypoint.Name == name);
+
+  private async void TargetToggle_Click(object sender, RoutedEventArgs e)
+  {
+    if (((FrameworkElement)sender).DataContext is not WaypointItem item) return;
+    item.Waypoint = item.Waypoint with { IsTarget = !item.Waypoint.IsTarget };
+    Refresh();
+    await App.DcsSender.ShowRouteAsync(Waypoints);
+  }
+
+  private static string DescribeTransfer(SupportedAircraft aircraft, TransferSequence sequence, int start)
+  {
+    var waypoints = sequence.Steerpoints.Count(s => s is not null);
+    var targets = sequence.Steerpoints.Count - waypoints;
+    var route = $"{waypoints} waypoints from {aircraft.SteerpointName} {start}";
+    if (targets == 0) return route;
+    return waypoints == 0 ? $"{targets} targets" : $"{route} and {targets} targets";
+  }
 
   private async void DeleteWaypointButton_Click(object sender, RoutedEventArgs e)
   {
