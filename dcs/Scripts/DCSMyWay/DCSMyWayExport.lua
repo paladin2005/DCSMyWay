@@ -6,7 +6,7 @@ package.cpath = package.cpath .. ';' .. lfs.currentdir() .. '/LuaSocket/?.dll'
 local socket = require('socket')
 local JSON = loadfile(lfs.currentdir() .. '/Scripts/JSON.lua')()
 
-local VERSION = '0.9.1'
+local VERSION = '0.10.0'
 local HOST = '127.0.0.1'
 local APP_PORT = 42080
 local COMMAND_PORT = 42082
@@ -19,6 +19,10 @@ local STEERPOINT_SOURCES = {
   { model = '^F%-16', indicators = { 6 }, elements = { 'Selected Steerpoint', 'STEERPOINT NUMBER', 'INS_SelectedSteerpoint' }, display = 'DED' },
   { model = '^FA%-18', indicators = { 4, 2, 3 }, elements = { 'WYPT_Page_Number' } },
   { model = '^A%-10C', indicators = { 3 }, elements = { 'CurrSteerPointNumber' } },
+  { model = '^AH%-64', seatIndicators = { [0] = { 9, 7 }, [1] = { 13, 11 } }, elements = { 'NextWaypointStatusWindow_text_1' }, pattern = '^W(%d+)$' },
+}
+local SEAT_MODELS = {
+  '^AH%-64',
 }
 
 local udp
@@ -43,6 +47,7 @@ local transferId
 local doneSteps = 0
 local failure
 local steerpoint
+local seat
 local unknownDisplayLogged = false
 local lastError
 
@@ -109,12 +114,13 @@ local function readElements(indicator)
 end
 
 local function readSourceSteerpoint(source, logUnknown)
-  for _, indicator in ipairs(source.indicators) do
+  local indicators = source.seatIndicators and source.seatIndicators[seat or 0] or source.indicators
+  for _, indicator in ipairs(indicators) do
     local text = readIndication(indicator)
     if text then
       local elements = parseIndication(text)
       for _, name in ipairs(source.elements) do
-        local current = elements[name] and tonumber(elements[name]:match('%d+'))
+        local current = elements[name] and tonumber(elements[name]:match(source.pattern or '%d+'))
         if current then return current end
       end
       if logUnknown and source.display and text ~= '' and not unknownDisplayLogged then
@@ -141,9 +147,26 @@ local function aircraftModel()
   return read and type(aircraft) == 'table' and aircraft.Name or nil
 end
 
+local function readSeat(model)
+  local hasSeats = false
+  for _, pattern in ipairs(SEAT_MODELS) do
+    if model and model:find(pattern) then hasSeats = true end
+  end
+  if not hasSeats then return nil end
+  local read, params = pcall(list_cockpit_params)
+  if not read or type(params) ~= 'string' then return nil end
+  local value = tonumber(('\n' .. params):match('\n%s*SEAT:%s*([%-%d%.]+)'))
+  return value and math.floor(value + 0.5) or nil
+end
+
 local function updateSteerpoint(now, model)
   if now < nextSteerpointAt then return end
   nextSteerpointAt = now + STEERPOINT_INTERVAL
+  local currentSeat = readSeat(model)
+  if currentSeat ~= seat then
+    seat = currentSeat
+    info('Seat is now ' .. (seat and tostring(seat) or 'unknown'))
+  end
   local current = readSteerpoint(model)
   if current == steerpoint then return end
   steerpoint = current
@@ -152,13 +175,14 @@ end
 
 local function stateMessage(model)
   return string.format(
-    '{"type":"cockpit","model":%s,"steerpoint":%s,"busy":%s,"transferId":%s,"done":%d,"failed":%s}',
+    '{"type":"cockpit","model":%s,"steerpoint":%s,"busy":%s,"transferId":%s,"done":%d,"failed":%s,"seat":%s}',
     model and jsonString(model) or 'null',
     steerpoint and string.format('%d', steerpoint) or 'null',
     tostring(steps ~= nil),
     transferId and string.format('%d', transferId) or 'null',
     doneSteps,
-    failure and jsonString(failure) or 'null')
+    failure and jsonString(failure) or 'null',
+    seat and string.format('%d', seat) or 'null')
 end
 
 local function send(message)
@@ -388,6 +412,7 @@ local function stepTransfer(now)
     stopSteps()
     return
   end
+  if phase == nil and step.unless and anyHolds(step.unless) then return finishStep() end
   if step.options then return stepOptions(step, now) end
   if phase == nil then return startStep(step, now) end
   if phase == 'holding' then

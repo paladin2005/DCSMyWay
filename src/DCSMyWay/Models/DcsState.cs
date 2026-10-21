@@ -8,4 +8,5 @@ public sealed record DcsState(
   int? ActiveSteerpoint,
   int? TransferId,
   int PressesDone,
-  string? TransferFailure = null);
+  string? TransferFailure = null,
+  int? Seat = null);

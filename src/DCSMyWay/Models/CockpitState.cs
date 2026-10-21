@@ -6,4 +6,5 @@ public sealed record CockpitState(
   bool IsEnteringWaypoints,
   int? TransferId,
   int PressesDone,
-  string? TransferFailure = null);
+  string? TransferFailure = null,
+  int? Seat = null);

@@ -22,11 +22,6 @@
       Spacing="12">
       <ToggleSwitch x:Name="AlwaysOnTopSwitch" Header="Always on top" />
       <ToggleSwitch x:Name="DontTakeFocusSwitch" Header="Don't take focus from other apps" />
-      <ToggleSwitch
-        x:Name="StartAtActiveSteerpointSwitch"
-        Header="Transfer starts at"
-        OffContent="Next steerpoint"
-        OnContent="Active steerpoint" />
       <RadioButtons
         x:Name="ThemeButtons"
         Header="Theme"

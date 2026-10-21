@@ -8,6 +8,8 @@ public sealed record StepOption(IndicationCheck When, ButtonPress? Press = null)
 
 public sealed record CockpitStep(ButtonPress? Press)
 {
+  public IReadOnlyList<IndicationCheck>? Unless { get; init; }
+
   public IReadOnlyList<IndicationCheck>? Until { get; init; }
 
   public IReadOnlyList<IndicationCheck>? Wait { get; init; }

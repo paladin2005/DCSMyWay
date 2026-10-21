@@ -79,6 +79,29 @@ public class DcsProtocolTests
   }
 
   [Fact]
+  public void ParsesTheSeatOfTwoSeatAircraft()
+  {
+    var json = """{"type":"cockpit","model":"AH-64D_BLK_II","steerpoint":2,"busy":false,"transferId":null,"done":0,"failed":null,"seat":1}""";
+
+    var parsed = DcsProtocol.TryParseMessage(Encoding.UTF8.GetBytes(json), out var message);
+
+    Assert.True(parsed);
+    Assert.Equal(new CockpitState("AH-64D_BLK_II", 2, false, null, 0, null, 1), message!.Cockpit);
+  }
+
+  [Fact]
+  public void SerializesStepsThatAreSkippedWhenTheDisplayShowsSomething()
+  {
+    CockpitStep[] steps = [new(new(29, 3006, 100)) { Unless = [new(16, "^Standby_text$", "^FREE:")] }];
+
+    var command = DcsProtocol.CreateWaypointsCommand(6, steps);
+
+    Assert.Equal(
+      """{"type":"waypoints","id":6,"steps":[{"device":29,"code":3006,"delay":100,"activate":1,"depress":true,"unless":[{"indicator":16,"element":"^Standby_text$","pattern":"^FREE:"}]}]}""",
+      command);
+  }
+
+  [Fact]
   public void SerializesPlainButtonPressesInTheFormatTheDcsScriptExpects()
   {
     CockpitStep[] steps = [new(new(17, 3032, 150, -1)), new(new(20, 3026, 100, 0.2, AddDepress: false))];

@@ -41,7 +41,7 @@ public static class A10
     1,
     LastWaypoint,
     "Turn on the CDU so DCSMyWay can read the active steerpoint",
-    (waypoints, start) => CreateTransfer(waypoints.Select(Format), start));
+    (waypoints, start, _) => CreateTransfer(waypoints.Select(Format), start));
 
   public static CockpitWaypoint Format(Waypoint waypoint) => new(
     waypoint.Name,
