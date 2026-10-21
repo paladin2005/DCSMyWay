@@ -18,7 +18,7 @@ public sealed record SupportedAircraft(
 
   public int? LastTarget { get; init; }
 
-  public static IReadOnlyList<SupportedAircraft> All => [F16.Aircraft, F18.Aircraft, A10.Aircraft, AH64.Aircraft, Ka50.Aircraft];
+  public static IReadOnlyList<SupportedAircraft> All => [F16.Aircraft, F18.Aircraft, A10.Aircraft, AH64.Aircraft, Ka50.Aircraft, MirageF1.Aircraft];
 
   public static string Names => $"{string.Join(", ", All.SkipLast(1).Select(a => a.Name))} and {All[^1].Name}";
 

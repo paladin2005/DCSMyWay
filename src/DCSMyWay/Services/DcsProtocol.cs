@@ -64,8 +64,8 @@ public static class DcsProtocol
     step.Press?.Delay,
     step.Press?.Activate,
     step.Press?.AddDepress,
-    CreateCheckCommands(step.Until),
-    CreateCheckCommands(step.Wait),
+    CreateCheckCommands(step.Until, step.UntilArguments),
+    CreateCheckCommands(step.Wait, step.WaitArguments),
     step.Select is { } select
       ? new SelectCommand(select.Indicator, select.Element, select.Target, CreatePressCommand(select.Decrease))
       : null,
@@ -74,7 +74,7 @@ public static class DcsProtocol
     step.Failure,
     step.Options?.Select(CreateOptionCommand).ToList(),
     step.Otherwise is { } otherwise ? CreatePressCommand(otherwise) : null,
-    CreateCheckCommands(step.Unless));
+    CreateCheckCommands(step.Unless, step.UnlessArguments));
 
   private static OptionCommand CreateOptionCommand(StepOption option) => new(
     CreateCheckCommand(option.When),
@@ -87,11 +87,17 @@ public static class DcsProtocol
   private static PressCommand CreatePressCommand(ButtonPress press) =>
     new(press.Device, press.Code, press.Delay, press.Activate, press.AddDepress);
 
-  private static List<CheckCommand>? CreateCheckCommands(IReadOnlyList<IndicationCheck>? checks) =>
-    checks?.Select(CreateCheckCommand).ToList();
+  private static List<CheckCommand>? CreateCheckCommands(IReadOnlyList<IndicationCheck>? checks, IReadOnlyList<ArgumentCheck>? arguments)
+  {
+    if (checks is null && arguments is null) return null;
+    return [.. (checks ?? []).Select(CreateCheckCommand), .. (arguments ?? []).Select(CreateCheckCommand)];
+  }
 
   private static CheckCommand CreateCheckCommand(IndicationCheck check) =>
-    new(check.Indicator, check.Element, check.Pattern, check.Values?.ToList());
+    new(check.Indicator, check.Element, check.Pattern, check.Values?.ToList(), null, null);
+
+  private static CheckCommand CreateCheckCommand(ArgumentCheck check) =>
+    new(null, null, null, null, [.. check.Arguments], [.. check.Levels]);
 
   public static string CreateCancelCommand() =>
     JsonSerializer.Serialize(new CancelCommand("cancel"), DcsJsonContext.Default.CancelCommand);
@@ -154,7 +160,7 @@ internal sealed record OptionCommand(CheckCommand When, int? Device, int? Code, 
 
 internal sealed record PressCommand(int Device, int Code, int Delay, double Activate, bool Depress);
 
-internal sealed record CheckCommand(int Indicator, string Element, string? Pattern, List<string>? Values);
+internal sealed record CheckCommand(int? Indicator, string? Element, string? Pattern, List<string>? Values, List<int>? Arguments, List<double>? Levels);
 
 internal sealed record SelectCommand(int Indicator, string Element, int Target, PressCommand Down);
 
