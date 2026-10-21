@@ -8,7 +8,6 @@ public class AH64Tests
 {
   private const int Enter = 3006;
   private const int Clear = 3001;
-  private const int Backspace = 3002;
   private static readonly TheWayFixture Fixture = TheWayFixture.Load("AH64EndToEnd.json");
 
   private static List<Waypoint> Waypoints => [.. Fixture.Raw!.Select(w => w.ToWaypoint())];
@@ -16,7 +15,7 @@ public class AH64Tests
   private static List<List<CockpitStep>> PointSteps(TransferSequence sequence)
   {
     var segments = new List<List<CockpitStep>>();
-    var start = 2;
+    var start = 0;
     foreach (var end in sequence.WaypointEnteredAfter)
     {
       segments.Add(sequence.Steps[start..end]);
@@ -47,7 +46,7 @@ public class AH64Tests
       var theWayName = KeysAfter(theWayKeys, theWayKeys.FindIndex(p => p.Code == Enter) + 1);
       var theWayAltitude = KeysAfter(theWayKeys, theWayKeys.FindLastIndex(p => p.Code == Clear) + 1);
       var ourKeys = ours[i].Where(s => s.Press?.Device == 29 && s.Unless is null).Select(s => s.Press!).ToList();
-      var ourName = KeysAfter(ourKeys, ourKeys.FindLastIndex(p => p.Code == Backspace) + 1);
+      var ourName = KeysAfter(ourKeys, ourKeys.FindIndex(p => p.Code == Clear) + 1);
       var ourAltitude = KeysAfter(ourKeys, ourKeys.FindLastIndex(p => p.Code == Clear) + 1);
       Assert.Equal(theWayName, ourName);
       Assert.Equal(theWayAltitude, ourAltitude);
@@ -82,7 +81,7 @@ public class AH64Tests
     var segment = PointSteps(AH64.CreateTransfer([waypoint], 1, 0))[0];
 
     var presses = segment.Where(s => s.Press is not null && s.Unless is null).Select(s => s.Press!).ToList();
-    var utmClear = presses.FindIndex(p => p is { Device: 29, Code: Clear });
+    var utmClear = presses.FindIndex(presses.FindIndex(p => p is { Device: 29, Code: Clear }) + 1, p => p is { Device: 29, Code: Clear });
     var typed = KeysAfter(presses, utmClear + 1);
     Assert.Equal(coordinate.Entry.Length, typed.Count);
     Assert.Contains(segment, s => s.Wait?.Any(c => c.Element == "^ActiveWaypointStatusWindowPOINT_text_8$" && c.Values![0] == coordinate.Display) == true);
@@ -95,7 +94,7 @@ public class AH64Tests
   {
     var segment = PointSteps(AH64.CreateTransfer(Waypoints.Take(1), 5, 0))[0];
 
-    var decision = Assert.Single(segment, s => s.Options is not null);
+    var decision = Assert.Single(segment, s => s.Options?.Count == 2);
     Assert.Equal(["W05", "IDENT>"], decision.Options!.Select(o => Assert.Single(o.When.Values!)));
     Assert.Equal([3024, 3023], decision.Options!.Select(o => o.Press!.Code));
     var editing = segment.Where(s => s.Unless?.Any(c => c.Pattern == "^IDENT:") == true).ToList();
@@ -110,8 +109,8 @@ public class AH64Tests
   {
     var segment = PointSteps(AH64.CreateTransfer(Waypoints.Take(1), 5, 0))[0];
 
-    Assert.Equal(new ButtonPress(43, 3022, 100), segment[1].Press);
-    Assert.Equal("WP", Assert.Single(Assert.Single(segment[1].Wait!).Values!));
+    Assert.Equal(new ButtonPress(43, 3022, 100), segment[3].Press);
+    Assert.Equal("WP", Assert.Single(Assert.Single(segment[3].Wait!).Values!));
   }
 
   [Fact]
@@ -119,10 +118,10 @@ public class AH64Tests
   {
     var sequence = AH64.CreateTransfer(Waypoints.Take(2), 7, 0);
 
-    var route = sequence.Steps[sequence.WaypointEnteredAfter[^1]..];
-    Assert.Equal(3014, route[0].Press!.Code);
-    var searches = route.Where(s => s.Options is not null).ToList();
+    var searches = sequence.Steps.Where(s => s.Options?.Count == 8).ToList();
     Assert.Equal(2, searches.Count);
+    Assert.Equal(2, sequence.Steps.Count(s => s.Press?.Code == 3014));
+    Assert.All(searches, search => Assert.True(sequence.Steps.IndexOf(search) < sequence.WaypointEnteredAfter[searches.IndexOf(search)]));
     Assert.All(searches.Select((search, i) => (search, number: 7 + i)), item =>
     {
       Assert.Equal(Enumerable.Repeat($"^..{item.number:00}$", 4), item.search.Options!.Take(4).Select(o => o.When.Pattern));
@@ -130,7 +129,7 @@ public class AH64Tests
       Assert.Equal([3008, 3009, 3010, 3011], item.search.Options!.Skip(4).Select(o => o.Press!.Code));
       Assert.Equal(new ButtonPress(43, 3007, 100), item.search.Otherwise);
     });
-    Assert.Equal(new ButtonPress(43, 3029, 100), route[^1].Press);
+    Assert.Equal(new ButtonPress(43, 3029, 100), sequence.Steps[^1].Press);
   }
 
   [Theory]
@@ -159,7 +158,7 @@ public class AH64Tests
     var sequence = AH64.CreateTransfer(waypoints, 5, 0);
 
     Assert.Equal([5, null, 6], sequence.Steerpoints);
-    var target = PointSteps(sequence)[1];
+    var target = PointSteps(sequence)[1][2..];
     Assert.Equal(new ButtonPress(43, 3023, 100), target[0].Press);
     Assert.Equal((3019, "TG"), (target[1].Press!.Code, Assert.Single(Assert.Single(target[1].Wait!).Values!)));
     Assert.Equal((3024, "^IDENT:"), (target[2].Press!.Code, Assert.Single(target[2].Wait!).Pattern));
@@ -176,7 +175,7 @@ public class AH64Tests
 
     var sequence = AH64.CreateTransfer(waypoints, 5, 0);
 
-    var searches = sequence.Steps[sequence.WaypointEnteredAfter[^1]..].Where(s => s.Options is not null).ToList();
+    var searches = sequence.Steps.Where(s => s.Options?.Count == 8).ToList();
     Assert.Equal("^..05$", Assert.Single(searches).Options![0].When.Pattern);
   }
 
@@ -190,6 +189,46 @@ public class AH64Tests
     Assert.Equal(new ButtonPress(43, 3029, 100), sequence.Steps[^1].Press);
     Assert.True(AH64.Aircraft.SupportsTargets);
     Assert.False(F16.Aircraft.SupportsTargets);
+  }
+
+  [Fact]
+  public void TypesTheThreatCodeAsTheTargetIdentifierAndReadsItBack()
+  {
+    var sequence = AH64.CreateTransfer([Waypoints[0] with { IsTarget = true, Threat = "15" }], 5, 0);
+
+    var target = PointSteps(sequence)[0][2..];
+    Assert.Equal([3033, 3037, 3006], target[3..6].Select(s => s.Press!.Code));
+    Assert.Equal("^FREE:", Assert.Single(target[5].Wait!).Pattern);
+    Assert.Equal("15", Assert.Single(Assert.Single(target[^1].Wait!).Values!));
+    Assert.Equal("^ActiveWaypointStatusWindowPOINT_text_2$", Assert.Single(target[^1].Wait!).Element);
+  }
+
+  [Fact]
+  public void AGenericTargetKeepsTheTgIdentifier()
+  {
+    var target = PointSteps(AH64.CreateTransfer([Waypoints[0] with { IsTarget = true }], 5, 0))[0][2..];
+
+    Assert.Equal((3006, "^FREE:"), (target[3].Press!.Code, Assert.Single(target[3].Wait!).Pattern));
+    Assert.Equal("TG", Assert.Single(Assert.Single(target[^1].Wait!).Values!));
+  }
+
+  [Fact]
+  public void ClearsTheFreeTextWithClrBecauseBksOnAnEmptyEntryCancelsThePrompt()
+  {
+    var segment = PointSteps(AH64.CreateTransfer(Waypoints.Take(1), 5, 0))[0];
+
+    Assert.DoesNotContain(segment, s => s.Press?.Code == 3002);
+    var clear = Assert.Single(segment, s => s.Wait?.Any(c => c.Pattern == "^FREE:#?$") == true);
+    Assert.Equal(new ButtonPress(29, 3001, 100), clear.Press);
+  }
+
+  [Fact]
+  public void GivesTheCheckmarkOnlyOnceThePointIsInTheRoute()
+  {
+    var sequence = AH64.CreateTransfer(Waypoints.Take(2), 5, 0);
+
+    var firstRouteCheck = sequence.Steps.FindIndex(s => s.Wait?.Any(c => c.Pattern == "^..05$") == true);
+    Assert.Equal(firstRouteCheck + 1, sequence.WaypointEnteredAfter[0]);
   }
 }
 

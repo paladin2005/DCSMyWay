@@ -163,9 +163,11 @@
             <StackPanel Grid.Column="1" VerticalAlignment="Center">
               <TextBlock
                 Style="{StaticResource BodyStrongTextBlockStyle}"
-                Text="{x:Bind Waypoint.Name, Mode=OneWay}"
                 TextTrimming="CharacterEllipsis"
-                TextWrapping="NoWrap" />
+                TextWrapping="NoWrap">
+                <Run Text="{x:Bind Waypoint.Name, Mode=OneWay}" />
+                <Run Foreground="{ThemeResource SystemFillColorCriticalBrush}" Text="{x:Bind local:MainPage.ThreatLabel(Waypoint), Mode=OneWay}" />
+              </TextBlock>
               <TextBlock
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                 Style="{StaticResource CaptionTextBlockStyle}"
@@ -186,10 +188,10 @@
             <Button
               Grid.Column="3"
               Padding="6,4"
-              AutomationProperties.Name="Rename"
-              Click="RenameWaypointButton_Click"
+              AutomationProperties.Name="Edit"
+              Click="EditWaypointButton_Click"
               Style="{StaticResource SubtleButtonStyle}"
-              ToolTipService.ToolTip="Rename">
+              ToolTipService.ToolTip="Edit">
               <FontIcon FontSize="12" Glyph="&#xE70F;" />
             </Button>
             <Button
@@ -308,17 +310,26 @@
     </ContentDialog>
 
     <ContentDialog
-      x:Name="RenameDialog"
-      Title="Rename waypoint"
+      x:Name="EditDialog"
+      Title="Edit waypoint"
       CloseButtonText="Cancel"
       DefaultButton="Primary"
-      Opened="RenameDialog_Opened"
-      PrimaryButtonText="Rename">
-      <TextBox
-        x:Name="RenameBox"
-        AutomationProperties.AutomationId="RenameBox"
-        CharacterCasing="Upper"
-        TextChanged="RenameBox_TextChanged" />
+      Opened="EditDialog_Opened"
+      PrimaryButtonText="Save">
+      <StackPanel Spacing="12">
+        <TextBox
+          x:Name="NameBox"
+          AutomationProperties.AutomationId="NameBox"
+          CharacterCasing="Upper"
+          Header="Name"
+          TextChanged="NameBox_TextChanged" />
+        <ComboBox
+          x:Name="ThreatBox"
+          HorizontalAlignment="Stretch"
+          AutomationProperties.AutomationId="ThreatBox"
+          DisplayMemberPath="Name"
+          Header="Target type" />
+      </StackPanel>
     </ContentDialog>
   </Grid>
 </Page>

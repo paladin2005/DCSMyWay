@@ -29,13 +29,16 @@ public sealed partial class MainPage : Page
   private int? _failureShownTransferId;
   private int _nextWaypointNumber = 1;
   private bool _wasConnected;
-  private WaypointItem? _renamingItem;
+  private WaypointItem? _editingItem;
 
   public MainPage()
   {
     InitializeComponent();
     WaypointList.ItemsSource = _items;
-    RenameBox.MaxLength = Waypoint.MaxNameLength;
+    NameBox.MaxLength = Waypoint.MaxNameLength;
+    ThreatBox.ItemsSource = ApacheThreats.All;
+    TransferButton.IsEnabledChanged += (_, _) =>
+      VisualStateManager.GoToState(TransferButton, TransferButton.IsEnabled ? "Normal" : "Disabled", true);
     Loaded += OnLoaded;
     Unloaded += OnUnloaded;
   }
@@ -300,32 +303,40 @@ public sealed partial class MainPage : Page
     ShowMessage(InfoBarSeverity.Warning, "Transfer cancelled. Waypoints with a checkmark were entered");
   }
 
-  private async void RenameWaypointButton_Click(object sender, RoutedEventArgs e)
+  public static string ThreatLabel(Waypoint waypoint) =>
+    waypoint.IsTarget && waypoint.Threat is not null ? $"  {ApacheThreats.Find(waypoint.Threat).Name}" : "";
+
+  private async void EditWaypointButton_Click(object sender, RoutedEventArgs e)
   {
     if (((FrameworkElement)sender).DataContext is not WaypointItem item) return;
-    _renamingItem = item;
-    RenameBox.Text = item.Waypoint.Name;
-    ValidateRename();
-    if (await App.MainWindow.ShowWithKeyboardAsync(RenameDialog) != ContentDialogResult.Primary || RenameBox.Text == item.Waypoint.Name) return;
-    item.Waypoint = item.Waypoint with { Name = RenameBox.Text };
+    _editingItem = item;
+    NameBox.Text = item.Waypoint.Name;
+    ThreatBox.SelectedItem = ApacheThreats.Find(item.Waypoint.Threat);
+    ThreatBox.Visibility = item.ShowsTargetToggle && item.Waypoint.IsTarget ? Visibility.Visible : Visibility.Collapsed;
+    ValidateName();
+    if (await App.MainWindow.ShowWithKeyboardAsync(EditDialog) != ContentDialogResult.Primary) return;
+    var threat = ThreatBox.Visibility == Visibility.Visible ? (ThreatBox.SelectedItem as ApacheThreat)?.Code : item.Waypoint.Threat;
+    var edited = item.Waypoint with { Name = NameBox.Text, Threat = threat };
+    if (edited == item.Waypoint) return;
+    item.Waypoint = edited;
     Refresh();
     await App.DcsSender.ShowRouteAsync(Waypoints);
   }
 
-  private void RenameDialog_Opened(ContentDialog sender, ContentDialogOpenedEventArgs args)
+  private void EditDialog_Opened(ContentDialog sender, ContentDialogOpenedEventArgs args)
   {
-    RenameBox.Focus(FocusState.Programmatic);
-    RenameBox.SelectAll();
+    NameBox.Focus(FocusState.Programmatic);
+    NameBox.SelectAll();
   }
 
-  private void RenameBox_TextChanged(object sender, TextChangedEventArgs e) => ValidateRename();
+  private void NameBox_TextChanged(object sender, TextChangedEventArgs e) => ValidateName();
 
-  private void ValidateRename()
+  private void ValidateName()
   {
-    var name = RenameBox.Text;
-    var taken = IsNameTaken(name, _renamingItem);
-    RenameDialog.IsPrimaryButtonEnabled = Waypoint.IsValidName(name) && !taken;
-    RenameBox.Description = taken ? "Another waypoint already has this name" : NameRules;
+    var name = NameBox.Text;
+    var taken = IsNameTaken(name, _editingItem);
+    EditDialog.IsPrimaryButtonEnabled = Waypoint.IsValidName(name) && !taken;
+    NameBox.Description = taken ? "Another waypoint already has this name" : NameRules;
   }
 
   private bool IsNameTaken(string name, WaypointItem? except) =>
