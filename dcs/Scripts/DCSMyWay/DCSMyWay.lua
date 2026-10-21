@@ -10,7 +10,7 @@ local DialogLoader = require('DialogLoader')
 local SkinUtils = require('SkinUtils')
 local Terrain = require('terrain')
 
-local VERSION = '0.7.2'
+local VERSION = '0.8.0'
 local HOST = '127.0.0.1'
 local APP_PORT = 42080
 local COMMAND_PORT = 42081
@@ -29,21 +29,34 @@ local ROUTE_SCRIPT = [[
 for _, id in ipairs({ %s }) do trigger.action.removeMark(id) end
 local color = { 0, 0.9, 1, 1 }
 local fill = { 0, 0.9, 1, 0.3 }
+local targetColor = { 1, 0.2, 0.2, 1 }
+local targetFill = { 1, 0.2, 0.2, 0.3 }
 local labelFill = { 0, 0, 0, 0.6 }
 local points = { %s }
 local positions = {}
 local id = %d
+local previous
 for index, point in ipairs(points) do
   positions[index] = coord.LLtoLO(point[2], point[3], 0)
-  if index > 1 then
-    trigger.action.lineToAll(-1, id, positions[index - 1], positions[index], color, 1, true)
-    id = id + 1
+  if not point[4] then
+    if previous then
+      trigger.action.lineToAll(-1, id, positions[previous], positions[index], color, 1, true)
+      id = id + 1
+    end
+    previous = index
   end
 end
 for index, point in ipairs(points) do
-  trigger.action.circleToAll(-1, id, positions[index], 200, color, fill, 1, true)
-  trigger.action.textToAll(-1, id + 1, positions[index], color, labelFill, 18, true, ' ' .. point[1] .. ' ')
+  local position = positions[index]
+  local pointColor = point[4] and targetColor or color
+  trigger.action.circleToAll(-1, id, position, 200, pointColor, point[4] and targetFill or fill, 1, true)
+  trigger.action.textToAll(-1, id + 1, position, pointColor, labelFill, 18, true, ' ' .. point[1] .. ' ')
   id = id + 2
+  if point[4] then
+    trigger.action.lineToAll(-1, id, { x = position.x - 350, y = position.y, z = position.z }, { x = position.x + 350, y = position.y, z = position.z }, pointColor, 1, true)
+    trigger.action.lineToAll(-1, id + 1, { x = position.x, y = position.y, z = position.z - 350 }, { x = position.x, y = position.y, z = position.z + 350 }, pointColor, 1, true)
+    id = id + 2
+  end
 end
 ]]
 
@@ -319,15 +332,19 @@ local function drawRoute(points)
     return
   end
   local entries = {}
+  local routePoints = 0
+  local targets = 0
   for _, point in ipairs(points) do
     if type(point.lat) == 'number' and type(point.lon) == 'number' then
-      table.insert(entries, string.format('{ %q, %.9f, %.9f }', tostring(point.name or ''), point.lat, point.lon))
+      local target = point.target == true
+      table.insert(entries, string.format('{ %q, %.9f, %.9f, %s }', tostring(point.name or ''), point.lat, point.lon, tostring(target)))
+      if target then targets = targets + 1 else routePoints = routePoints + 1 end
     end
   end
   local code = string.format(ROUTE_SCRIPT, table.concat(routeMarks, ', '), table.concat(entries, ', '), nextMarkId)
   local drawn, err = runInMission(code)
   routeMarks = {}
-  for _ = 1, #entries * 3 - math.min(#entries, 1) do
+  for _ = 1, #entries * 2 + targets * 2 + math.max(routePoints - 1, 0) do
     table.insert(routeMarks, nextMarkId)
     nextMarkId = nextMarkId + 1
   end

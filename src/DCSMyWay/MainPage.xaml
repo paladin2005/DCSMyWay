@@ -89,6 +89,52 @@
       BorderThickness="1"
       CornerRadius="{StaticResource OverlayCornerRadius}"
       SelectionMode="None">
+      <ListView.Resources>
+        <ResourceDictionary>
+          <ResourceDictionary.ThemeDictionaries>
+            <ResourceDictionary x:Key="Default">
+              <StaticResource x:Key="ToggleButtonBackground" ResourceKey="SubtleFillColorTransparentBrush" />
+              <StaticResource x:Key="ToggleButtonBackgroundPointerOver" ResourceKey="SubtleFillColorSecondaryBrush" />
+              <StaticResource x:Key="ToggleButtonBackgroundPressed" ResourceKey="SubtleFillColorTertiaryBrush" />
+              <StaticResource x:Key="ToggleButtonBackgroundChecked" ResourceKey="SubtleFillColorTransparentBrush" />
+              <StaticResource x:Key="ToggleButtonBackgroundCheckedPointerOver" ResourceKey="SubtleFillColorSecondaryBrush" />
+              <StaticResource x:Key="ToggleButtonBackgroundCheckedPressed" ResourceKey="SubtleFillColorTertiaryBrush" />
+              <StaticResource x:Key="ToggleButtonForeground" ResourceKey="TextFillColorTertiaryBrush" />
+              <StaticResource x:Key="ToggleButtonForegroundPointerOver" ResourceKey="TextFillColorSecondaryBrush" />
+              <StaticResource x:Key="ToggleButtonForegroundPressed" ResourceKey="TextFillColorSecondaryBrush" />
+              <StaticResource x:Key="ToggleButtonForegroundChecked" ResourceKey="SystemFillColorCriticalBrush" />
+              <StaticResource x:Key="ToggleButtonForegroundCheckedPointerOver" ResourceKey="SystemFillColorCriticalBrush" />
+              <StaticResource x:Key="ToggleButtonForegroundCheckedPressed" ResourceKey="SystemFillColorCriticalBrush" />
+              <StaticResource x:Key="ToggleButtonBorderBrush" ResourceKey="SubtleFillColorTransparentBrush" />
+              <StaticResource x:Key="ToggleButtonBorderBrushPointerOver" ResourceKey="SubtleFillColorTransparentBrush" />
+              <StaticResource x:Key="ToggleButtonBorderBrushPressed" ResourceKey="SubtleFillColorTransparentBrush" />
+              <StaticResource x:Key="ToggleButtonBorderBrushChecked" ResourceKey="SubtleFillColorTransparentBrush" />
+              <StaticResource x:Key="ToggleButtonBorderBrushCheckedPointerOver" ResourceKey="SubtleFillColorTransparentBrush" />
+              <StaticResource x:Key="ToggleButtonBorderBrushCheckedPressed" ResourceKey="SubtleFillColorTransparentBrush" />
+            </ResourceDictionary>
+            <ResourceDictionary x:Key="Light">
+              <StaticResource x:Key="ToggleButtonBackground" ResourceKey="SubtleFillColorTransparentBrush" />
+              <StaticResource x:Key="ToggleButtonBackgroundPointerOver" ResourceKey="SubtleFillColorSecondaryBrush" />
+              <StaticResource x:Key="ToggleButtonBackgroundPressed" ResourceKey="SubtleFillColorTertiaryBrush" />
+              <StaticResource x:Key="ToggleButtonBackgroundChecked" ResourceKey="SubtleFillColorTransparentBrush" />
+              <StaticResource x:Key="ToggleButtonBackgroundCheckedPointerOver" ResourceKey="SubtleFillColorSecondaryBrush" />
+              <StaticResource x:Key="ToggleButtonBackgroundCheckedPressed" ResourceKey="SubtleFillColorTertiaryBrush" />
+              <StaticResource x:Key="ToggleButtonForeground" ResourceKey="TextFillColorTertiaryBrush" />
+              <StaticResource x:Key="ToggleButtonForegroundPointerOver" ResourceKey="TextFillColorSecondaryBrush" />
+              <StaticResource x:Key="ToggleButtonForegroundPressed" ResourceKey="TextFillColorSecondaryBrush" />
+              <StaticResource x:Key="ToggleButtonForegroundChecked" ResourceKey="SystemFillColorCriticalBrush" />
+              <StaticResource x:Key="ToggleButtonForegroundCheckedPointerOver" ResourceKey="SystemFillColorCriticalBrush" />
+              <StaticResource x:Key="ToggleButtonForegroundCheckedPressed" ResourceKey="SystemFillColorCriticalBrush" />
+              <StaticResource x:Key="ToggleButtonBorderBrush" ResourceKey="SubtleFillColorTransparentBrush" />
+              <StaticResource x:Key="ToggleButtonBorderBrushPointerOver" ResourceKey="SubtleFillColorTransparentBrush" />
+              <StaticResource x:Key="ToggleButtonBorderBrushPressed" ResourceKey="SubtleFillColorTransparentBrush" />
+              <StaticResource x:Key="ToggleButtonBorderBrushChecked" ResourceKey="SubtleFillColorTransparentBrush" />
+              <StaticResource x:Key="ToggleButtonBorderBrushCheckedPointerOver" ResourceKey="SubtleFillColorTransparentBrush" />
+              <StaticResource x:Key="ToggleButtonBorderBrushCheckedPressed" ResourceKey="SubtleFillColorTransparentBrush" />
+            </ResourceDictionary>
+          </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+      </ListView.Resources>
       <ListView.ItemContainerTransitions>
         <TransitionCollection />
       </ListView.ItemContainerTransitions>
@@ -104,6 +150,7 @@
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="14" />
               <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
               <ColumnDefinition Width="Auto" />
               <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
@@ -126,8 +173,18 @@
                 TextTrimming="CharacterEllipsis"
                 TextWrapping="NoWrap" />
             </StackPanel>
-            <Button
+            <ToggleButton
               Grid.Column="2"
+              Padding="6,4"
+              AutomationProperties.Name="Attack phase target"
+              Click="TargetToggle_Click"
+              IsChecked="{x:Bind Waypoint.IsTarget, Mode=OneWay}"
+              ToolTipService.ToolTip="Attack phase target"
+              Visibility="{x:Bind ShowsTargetToggle, Mode=OneWay}">
+              <PathIcon Data="M6,1.5 A4.5,4.5 0 1 1 6,10.5 A4.5,4.5 0 1 1 6,1.5 Z M6,2.6 A3.4,3.4 0 1 1 6,9.4 A3.4,3.4 0 1 1 6,2.6 Z M5.45,0 L6.55,0 L6.55,1.5 L5.45,1.5 Z M5.45,2.6 L6.55,2.6 L6.55,4.4 L5.45,4.4 Z M5.45,7.6 L6.55,7.6 L6.55,9.4 L5.45,9.4 Z M5.45,10.5 L6.55,10.5 L6.55,12 L5.45,12 Z M0,5.45 L1.5,5.45 L1.5,6.55 L0,6.55 Z M2.6,5.45 L4.4,5.45 L4.4,6.55 L2.6,6.55 Z M7.6,5.45 L9.4,5.45 L9.4,6.55 L7.6,6.55 Z M10.5,5.45 L12,5.45 L12,6.55 L10.5,6.55 Z" />
+            </ToggleButton>
+            <Button
+              Grid.Column="3"
               Padding="6,4"
               AutomationProperties.Name="Rename"
               Click="RenameWaypointButton_Click"
@@ -136,7 +193,7 @@
               <FontIcon FontSize="12" Glyph="&#xE70F;" />
             </Button>
             <Button
-              Grid.Column="3"
+              Grid.Column="4"
               Padding="6,4"
               AutomationProperties.Name="Delete"
               Click="DeleteWaypointButton_Click"

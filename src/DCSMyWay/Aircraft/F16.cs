@@ -94,6 +94,6 @@ public static class F16
     }
 
     presses.Add(new(Icp, ReturnSwitch, longDelay, -1));
-    return new TransferSequence([.. presses.Select(p => new CockpitStep(p))], waypointEnteredAfter);
+    return new TransferSequence([.. presses.Select(p => new CockpitStep(p))], waypointEnteredAfter, [.. Enumerable.Range(startSteerpoint, waypointEnteredAfter.Count).Select(n => (int?)n)]);
   }
 }

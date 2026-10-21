@@ -78,7 +78,7 @@ public static class F18
 
     steps.Add(SelectWaypoint(startWaypoint));
     steps.Add(PageStep(ReturnToHsiButton, [HsiPage], "The AMPCD did not go back to the HSI"));
-    return new TransferSequence(steps, waypointEnteredAfter);
+    return new TransferSequence(steps, waypointEnteredAfter, [.. Enumerable.Range(startWaypoint, waypointEnteredAfter.Count).Select(n => (int?)n)]);
   }
 
   private static void OpenWaypointData(List<CockpitStep> steps)

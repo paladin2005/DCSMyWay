@@ -134,4 +134,13 @@ public class F18Tests
   {
     Assert.Equal((1, 59), (F18.Aircraft.FirstSteerpoint, F18.Aircraft.LastSteerpoint));
   }
+
+  [Fact]
+  public void NumbersEveryWaypointFromTheStart()
+  {
+    var sequence = F18.CreateTransfer(Waypoints, 12);
+
+    Assert.Equal(Enumerable.Range(sequence.Steerpoints[0]!.Value, sequence.Steerpoints.Count).Select(n => (int?)n), sequence.Steerpoints);
+    Assert.Equal(sequence.WaypointEnteredAfter.Count, sequence.Steerpoints.Count);
+  }
 }

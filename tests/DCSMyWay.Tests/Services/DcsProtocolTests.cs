@@ -192,6 +192,18 @@ public class DcsProtocolTests
   }
 
   [Fact]
+  public void FlagsTargetsInTheRouteCommand()
+  {
+    Waypoint[] waypoints = [new(1, "W1", 41.5, 43.5, 10), new(2, "TGT", 41.6, 43.6, 12, IsTarget: true)];
+
+    var command = DcsProtocol.CreateRouteCommand(waypoints);
+
+    Assert.Equal(
+      """{"type":"route","points":[{"name":"W1","lat":41.5,"lon":43.5},{"name":"TGT","lat":41.6,"lon":43.6,"target":true}]}""",
+      command);
+  }
+
+  [Fact]
   public void SerializesAnEmptyRouteToClearTheMap()
   {
     Assert.Equal("""{"type":"route","points":[]}""", DcsProtocol.CreateRouteCommand([]));

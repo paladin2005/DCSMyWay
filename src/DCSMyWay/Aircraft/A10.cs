@@ -69,7 +69,7 @@ public static class A10
     }
 
     AddToFlightPlan(steps, entered);
-    return new TransferSequence(steps, waypointEnteredAfter);
+    return new TransferSequence(steps, waypointEnteredAfter, [.. Enumerable.Range(startWaypoint, waypointEnteredAfter.Count).Select(n => (int?)n)]);
   }
 
   private static void AddToFlightPlan(List<CockpitStep> steps, List<(CockpitWaypoint Waypoint, int Number)> waypoints)
