@@ -19,6 +19,8 @@ public partial class App : Application
 
   public static DcsSender DcsSender { get; } = new(DcsSender.DefaultHookPort, DcsSender.DefaultCockpitPort);
 
+  public static DcsScripts DcsScripts { get; } = new(DcsScripts.DefaultSource);
+
   public static MainWindow MainWindow { get; private set; } = null!;
 
   protected override async void OnLaunched(LaunchActivatedEventArgs args)

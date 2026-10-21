@@ -16,10 +16,12 @@
     <EnableMsixTooling>true</EnableMsixTooling>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
     <Content Include="Assets\AppIcon.ico" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\dcs\**" LinkBase="DCS" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
@@ -28,11 +30,23 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2705" />
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.5.1" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.InteractiveExperiences" Version="2.1.9" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="2.3.9" />
   </ItemGroup>
+
+  <Target Name="RemoveNonEnglishMuiFiles" AfterTargets="AddMicrosoftWindowsAppSDKPayloadFilesFromComponents">
+    <ItemGroup>
+      <_NonEnglishMuiFiles Include="@(None)" Condition="'%(None.Extension)' == '.mui' and $([System.String]::Copy('%(None.Link)').Contains('\')) and !$([System.String]::Copy('%(None.Link)').ToLowerInvariant().StartsWith('en-us\'))" />
+      <None Remove="@(_NonEnglishMuiFiles)" />
+    </ItemGroup>
+  </Target>
 
   <PropertyGroup Condition="'$(Configuration)' != 'Debug'">
     <PublishReadyToRun>true</PublishReadyToRun>
     <PublishTrimmed>true</PublishTrimmed>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
 </Project>

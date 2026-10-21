@@ -2,7 +2,7 @@ using System.ComponentModel;
 
 namespace DCSMyWay.Models;
 
-public sealed class WaypointItem(Waypoint waypoint) : INotifyPropertyChanged
+public sealed partial class WaypointItem(Waypoint waypoint) : INotifyPropertyChanged
 {
   public event PropertyChangedEventHandler? PropertyChanged;
 

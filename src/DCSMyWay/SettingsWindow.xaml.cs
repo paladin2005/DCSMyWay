@@ -1,7 +1,9 @@
 using DCSMyWay.Interop;
 using DCSMyWay.Models;
+using DCSMyWay.Services;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using Windows.Graphics;
 
 namespace DCSMyWay;
@@ -9,7 +11,7 @@ namespace DCSMyWay;
 public sealed partial class SettingsWindow : Window
 {
   private const int WindowWidth = 320;
-  private const int WindowHeight = 320;
+  private const int WindowHeight = 380;
 
   public SettingsWindow(Window owner)
   {
@@ -52,6 +54,22 @@ public sealed partial class SettingsWindow : Window
   }
 
   private void OnSettingsChanged(object? sender, AppSettings settings) => ApplySettings(settings);
+
+  private async void RemoveFromDcsButton_Click(object sender, RoutedEventArgs e)
+  {
+    if (await RemoveFromDcsDialog.ShowAsync() != ContentDialogResult.Primary) return;
+    try
+    {
+      foreach (var folder in await DcsFolders.FindAsync()) await App.DcsScripts.RemoveAsync(folder);
+    }
+    catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+    {
+      MessageBar.Message = $"DCSMyWay could not be removed from DCS: {exception.Message}";
+      MessageBar.IsOpen = true;
+      return;
+    }
+    Application.Current.Exit();
+  }
 
   private void ApplySettings(AppSettings settings)
   {
