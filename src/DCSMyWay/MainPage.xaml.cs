@@ -462,10 +462,12 @@ public sealed partial class MainPage : Page
   {
     var waypoints = sequence.Steerpoints.Count(s => s is not null);
     var targets = sequence.Steerpoints.Count - waypoints;
-    var route = $"{waypoints} waypoints from {aircraft.SteerpointName} {start}";
+    var route = $"{Count(waypoints, "waypoint")} from {aircraft.SteerpointName} {start}";
     if (targets == 0) return route;
-    return waypoints == 0 ? $"{targets} targets" : $"{route} and {targets} targets";
+    return waypoints == 0 ? Count(targets, "target") : $"{route} and {Count(targets, "target")}";
   }
+
+  private static string Count(int count, string noun) => count == 1 ? $"1 {noun}" : $"{count} {noun}s";
 
   private async void DeleteWaypointButton_Click(object sender, RoutedEventArgs e)
   {
