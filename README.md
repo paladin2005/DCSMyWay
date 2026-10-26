@@ -51,7 +51,7 @@
 | **Crosshair inside DCS** | The crosshair and the accept button are drawn by DCS itself, centered on your main view (multi-monitor and WinWing setups included). |
 | **Your route on the F10 map** | Waypoints are drawn on the F10 map as you add them, targets in red, Apache threats with their engagement ring. |
 | **Global shortcuts** | Show the crosshair, add, delete, transfer or clear without leaving DCS. Joystick buttons mapped to keys work too, and DCS doesn't receive the keys you assign. |
-| **Native and light** | A small native Windows app (WinUI 3) that stays on top of DCS without stealing focus, in light or dark theme. |
+| **Native and light** | A native Windows app (WinUI 3) instead of an Electron app with a built-in browser. In our tests it uses about a third of the memory of a similar Electron tool (around 140 MB in a single process), and it opens in under a second. It stays on top of DCS without stealing focus, in light or dark theme. |
 | **Plays well with others** | Uses its own ports, so it can run side by side with TheWay. Works as a multiplayer client too. |
 
 ## Supported aircraft
