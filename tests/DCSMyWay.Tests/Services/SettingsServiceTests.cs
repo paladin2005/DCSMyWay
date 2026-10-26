@@ -50,6 +50,21 @@ public sealed class SettingsServiceTests : IDisposable
   }
 
   [Fact]
+  public async Task PersistsShortcutsWithTheKeyName()
+  {
+    var service = new SettingsService(SettingsPath);
+    var shortcut = new Shortcut(Windows.System.VirtualKey.F5, Control: true);
+    await service.UpdateAsync(s => s.WithShortcut(ShortcutAction.Transfer, shortcut));
+
+    var restarted = new SettingsService(SettingsPath);
+    await restarted.LoadAsync();
+
+    Assert.Equal(shortcut, restarted.Current.TransferShortcut);
+    Assert.Null(restarted.Current.ClearAllShortcut);
+    Assert.Contains("\"Key\": \"F5\"", await File.ReadAllTextAsync(SettingsPath, TestContext.Current.CancellationToken));
+  }
+
+  [Fact]
   public async Task FollowsTheSystemThemeWhenOlderSettingsHaveNoTheme()
   {
     Directory.CreateDirectory(_directory);

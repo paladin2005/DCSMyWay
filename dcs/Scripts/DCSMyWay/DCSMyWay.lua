@@ -10,7 +10,7 @@ local DialogLoader = require('DialogLoader')
 local SkinUtils = require('SkinUtils')
 local Terrain = require('terrain')
 
-local VERSION = '0.9.0'
+local VERSION = '0.10.0'
 local HOST = '127.0.0.1'
 local APP_PORT = 42080
 local COMMAND_PORT = 42081
@@ -239,7 +239,7 @@ end
 
 local function layoutOverlay()
   local x, y, width, height = screenCenter()
-  overlay:setBounds(x - 180, y - 140, 360, 280)
+  overlay:setBounds(x - 450, y - 140, 900, 280)
   acceptWindow:setBounds(x - 26, y - 100, 52, 52)
   local layout = string.format('Crosshair at %d,%d on a %dx%d screen', x, y, width, height)
   if layout == lastLayout then return end
@@ -251,14 +251,24 @@ local function setPicture(widget, file, color)
   widget:setSkin(SkinUtils.setStaticPicture(FOLDER .. file, widget:getSkin(), color))
 end
 
+local createOverlay
+
 local function showStatus(text)
-  statusUntil = socket.gettime() + STATUS_DURATION
-  if overlay then overlay.Status:setText(text) end
+  statusUntil = socket.gettime() + math.max(STATUS_DURATION, #text / 15)
+  if not overlay then createOverlay() end
+  if not crosshairVisible then
+    layoutOverlay()
+    overlay.Crosshair:setVisible(false)
+    overlay:setVisible(true)
+  end
+  overlay.Status:setText(text)
 end
 
 local function clearStatus()
   statusUntil = nil
-  if overlay then overlay.Status:setText('') end
+  if not overlay then return end
+  overlay.Status:setText('')
+  if not crosshairVisible then overlay:setVisible(false) end
 end
 
 local function mark()
@@ -272,7 +282,7 @@ local function mark()
   showStatus('Adding point...')
 end
 
-local function createOverlay()
+function createOverlay()
   local newOverlay = DialogLoader.spawnDialogFromFile(FOLDER .. 'Overlay.dlg')
   newOverlay:setTransparentForUserInput(true)
   setPicture(newOverlay.Crosshair, [[Images\Crosshair.png]], CROSSHAIR_COLOR)
@@ -306,8 +316,9 @@ local function setCrosshairVisible(visible)
   crosshairVisible = visible
   if visible and not overlay then createOverlay() end
   if not overlay then return end
-  if visible then layoutOverlay() else clearStatus() end
-  overlay:setVisible(visible)
+  if visible then layoutOverlay() end
+  overlay.Crosshair:setVisible(visible)
+  overlay:setVisible(visible or statusUntil ~= nil)
   acceptWindow:setVisible(visible)
 end
 
@@ -429,6 +440,7 @@ local callbacks = {}
 callbacks.onSimulationFrame = guarded(frame)
 
 callbacks.onSimulationStop = guarded(function()
+  clearStatus()
   setCrosshairVisible(false)
   closeSockets()
   markSentAt = nil

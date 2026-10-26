@@ -16,29 +16,121 @@
 
     <TitleBar x:Name="AppTitleBar" Title="Settings" />
 
-    <StackPanel
-      Grid.Row="1"
-      Padding="16"
-      Spacing="12">
-      <ToggleSwitch x:Name="AlwaysOnTopSwitch" Header="Always on top" />
-      <ToggleSwitch x:Name="DontTakeFocusSwitch" Header="Don't take focus from other apps" />
-      <RadioButtons
-        x:Name="ThemeButtons"
-        Header="Theme"
-        MaxColumns="3">
-        <x:String>System</x:String>
-        <x:String>Light</x:String>
-        <x:String>Dark</x:String>
-      </RadioButtons>
-      <Button
-        x:Name="RemoveFromDcsButton"
-        Click="RemoveFromDcsButton_Click"
-        Content="Remove from DCS" />
-      <InfoBar
-        x:Name="MessageBar"
-        IsClosable="True"
-        Severity="Error" />
-    </StackPanel>
+    <ScrollViewer Grid.Row="1">
+      <StackPanel Padding="16" Spacing="12">
+        <ToggleSwitch x:Name="AlwaysOnTopSwitch" Header="Always on top" />
+        <ToggleSwitch x:Name="DontTakeFocusSwitch" Header="Don't take focus from other apps" />
+        <RadioButtons
+          x:Name="ThemeButtons"
+          Header="Theme"
+          MaxColumns="3">
+          <x:String>System</x:String>
+          <x:String>Light</x:String>
+          <x:String>Dark</x:String>
+        </RadioButtons>
+
+        <StackPanel Spacing="4">
+          <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Shortcuts" />
+          <TextBlock
+            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+            Style="{StaticResource CaptionTextBlockStyle}"
+            Text="They work in any app, DCS included, and DCS doesn't get the keys"
+            TextWrapping="Wrap" />
+        </StackPanel>
+        <Grid ColumnSpacing="12" RowSpacing="8">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+          <TextBlock VerticalAlignment="Center" Text="Show/hide crosshair" />
+          <Button
+            x:Name="ToggleCrosshairShortcutButton"
+            Grid.Column="1"
+            MinWidth="120"
+            Click="ShortcutButton_Click"
+            Tag="ToggleCrosshair" />
+          <TextBlock
+            Grid.Row="1"
+            VerticalAlignment="Center"
+            Text="Add waypoint" />
+          <Button
+            x:Name="AddWaypointShortcutButton"
+            Grid.Row="1"
+            Grid.Column="1"
+            MinWidth="120"
+            Click="ShortcutButton_Click"
+            Tag="AddWaypoint" />
+          <TextBlock
+            Grid.Row="2"
+            VerticalAlignment="Center"
+            Text="Delete last waypoint" />
+          <Button
+            x:Name="DeleteLastWaypointShortcutButton"
+            Grid.Row="2"
+            Grid.Column="1"
+            MinWidth="120"
+            Click="ShortcutButton_Click"
+            Tag="DeleteLastWaypoint" />
+          <TextBlock
+            Grid.Row="3"
+            VerticalAlignment="Center"
+            Text="Transfer or cancel" />
+          <Button
+            x:Name="TransferShortcutButton"
+            Grid.Row="3"
+            Grid.Column="1"
+            MinWidth="120"
+            Click="ShortcutButton_Click"
+            Tag="Transfer" />
+          <TextBlock
+            Grid.Row="4"
+            VerticalAlignment="Center"
+            Text="Clear all" />
+          <Button
+            x:Name="ClearAllShortcutButton"
+            Grid.Row="4"
+            Grid.Column="1"
+            MinWidth="120"
+            Click="ShortcutButton_Click"
+            Tag="ClearAll" />
+        </Grid>
+
+        <Button
+          x:Name="RemoveFromDcsButton"
+          Click="RemoveFromDcsButton_Click"
+          Content="Remove from DCS" />
+        <InfoBar
+          x:Name="MessageBar"
+          IsClosable="True"
+          Severity="Error" />
+      </StackPanel>
+    </ScrollViewer>
+
+    <ContentDialog
+      x:Name="ShortcutDialog"
+      CloseButtonText="Cancel"
+      DefaultButton="Primary"
+      PrimaryButtonText="Save"
+      SecondaryButtonText="Clear">
+      <StackPanel Spacing="12">
+        <TextBlock TextWrapping="Wrap" Text="Press the keys of the new shortcut, with Ctrl, Shift or Alt if you like. Joystick buttons mapped to keys work too." />
+        <TextBlock
+          x:Name="CapturedShortcutText"
+          HorizontalAlignment="Center"
+          Style="{StaticResource SubtitleTextBlockStyle}" />
+        <InfoBar
+          x:Name="ShortcutConflictBar"
+          IsClosable="False"
+          Severity="Warning" />
+      </StackPanel>
+    </ContentDialog>
 
     <ContentDialog
       x:Name="RemoveFromDcsDialog"

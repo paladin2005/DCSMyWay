@@ -56,6 +56,7 @@ public sealed partial class MainPage : Page
   private async void OnLoaded(object sender, RoutedEventArgs e)
   {
     App.DcsListener.MarkReceived += OnMarkReceived;
+    App.Shortcuts.Triggered += OnShortcutTriggered;
     _refreshTimer = DispatcherQueue.CreateTimer();
     _refreshTimer.Interval = TimeSpan.FromMilliseconds(250);
     _refreshTimer.Tick += async (_, _) => await OnRefreshTickAsync();
@@ -100,6 +101,7 @@ public sealed partial class MainPage : Page
   private void OnUnloaded(object sender, RoutedEventArgs e)
   {
     App.DcsListener.MarkReceived -= OnMarkReceived;
+    App.Shortcuts.Triggered -= OnShortcutTriggered;
     _refreshTimer?.Stop();
   }
 
@@ -203,7 +205,64 @@ public sealed partial class MainPage : Page
     await App.DcsSender.ShowRouteAsync(Waypoints);
   }
 
-  private async void CrosshairButton_Click(object sender, RoutedEventArgs e)
+  private async void OnShortcutTriggered(object? sender, ShortcutAction action) => await (action switch
+  {
+    ShortcutAction.ToggleCrosshair => ToggleCrosshairAsync(),
+    ShortcutAction.AddWaypoint => AddWaypointAtCrosshairAsync(),
+    ShortcutAction.DeleteLastWaypoint => DeleteLastWaypointAsync(),
+    ShortcutAction.Transfer => TransferOrCancelAsync(),
+    ShortcutAction.ClearAll => ClearAllAsync(),
+    _ => Task.CompletedTask,
+  });
+
+  private async Task ToggleCrosshairAsync()
+  {
+    if (!CrosshairButton.IsEnabled) return;
+    CrosshairButton.IsChecked = CrosshairButton.IsChecked != true;
+    await ApplyCrosshairAsync();
+  }
+
+  private async Task AddWaypointAtCrosshairAsync()
+  {
+    var state = App.DcsListener.IsConnected ? App.DcsListener.Latest : null;
+    if (state is null) return;
+    if (!state.CrosshairVisible)
+    {
+      await App.DcsSender.ShowStatusAsync("Show the crosshair to add a waypoint");
+      return;
+    }
+    await AddWaypointAsync(state.Position);
+  }
+
+  private async Task DeleteLastWaypointAsync()
+  {
+    if (_items.Count == 0)
+    {
+      await App.DcsSender.ShowStatusAsync("There are no waypoints to delete");
+      return;
+    }
+    var item = _items[^1];
+    await DeleteWaypointAsync(item);
+    await App.DcsSender.ShowStatusAsync($"{item.Waypoint.Name} deleted");
+  }
+
+  private async Task TransferOrCancelAsync()
+  {
+    if (CancelTransferButton.IsEnabled) await CancelTransferAsync(true);
+    else if (TransferButton.IsEnabled) await TransferAsync(null, true);
+    else if (_items.Count == 0) await App.DcsSender.ShowStatusAsync("There are no waypoints to transfer");
+  }
+
+  private async Task ClearAllAsync()
+  {
+    if (_items.Count == 0) return;
+    await ClearWaypointsAsync();
+    await App.DcsSender.ShowStatusAsync("Waypoints cleared");
+  }
+
+  private async void CrosshairButton_Click(object sender, RoutedEventArgs e) => await ApplyCrosshairAsync();
+
+  private async Task ApplyCrosshairAsync()
   {
     _crosshairClickedUtc = DateTimeOffset.UtcNow;
     var visible = CrosshairButton.IsChecked == true;
@@ -234,20 +293,20 @@ public sealed partial class MainPage : Page
     AddAfterActiveItem.IsEnabled = active is not null;
   }
 
-  private async Task TransferAsync(bool? startAtActive)
+  private async Task TransferAsync(bool? startAtActive, bool fromShortcut = false)
   {
     var state = App.DcsListener.Latest;
     if (IsTransferInProgress || state?.IsEnteringWaypoints == true) return;
     var aircraft = SupportedAircraft.Find(state?.Position.Module);
     if (state is null || aircraft is null)
     {
-      ShowMessage(InfoBarSeverity.Warning, $"Only the {SupportedAircraft.Names} are supported for now ({state?.Position.Module ?? "no aircraft"})");
+      await NotifyAsync(InfoBarSeverity.Warning, fromShortcut, $"Only the {SupportedAircraft.Names} are supported for now ({state?.Position.Module ?? "no aircraft"})");
       return;
     }
 
     if (!App.DcsListener.IsCockpitConnected)
     {
-      ShowMessage(InfoBarSeverity.Warning, @"The DCSMyWay export script is not running. Check its line in Saved Games\DCS\Scripts\Export.lua");
+      await NotifyAsync(InfoBarSeverity.Warning, fromShortcut, @"The DCSMyWay export script is not running. Check its line in Saved Games\DCS\Scripts\Export.lua");
       return;
     }
 
@@ -259,7 +318,7 @@ public sealed partial class MainPage : Page
     {
       if (state.ActiveSteerpoint is not { } active)
       {
-        ShowMessage(InfoBarSeverity.Warning, aircraft.SteerpointHint);
+        await NotifyAsync(InfoBarSeverity.Warning, fromShortcut, aircraft.SteerpointHint);
         return;
       }
 
@@ -282,7 +341,7 @@ public sealed partial class MainPage : Page
     }
     else
     {
-      ShowMessage(InfoBarSeverity.Warning, aircraft.SteerpointHint);
+      await NotifyAsync(InfoBarSeverity.Warning, fromShortcut, aircraft.SteerpointHint);
       return;
     }
 
@@ -290,14 +349,20 @@ public sealed partial class MainPage : Page
     var sequence = aircraft.CreateTransfer(pending.Waypoints, new TransferStart(start, firstTarget, state.Seat));
     if (sequence.Steerpoints.Max() > aircraft.LastSteerpoint)
     {
-      ShowMessage(InfoBarSeverity.Warning, $"These waypoints don't fit: the {aircraft.Name} has {aircraft.SteerpointName}s up to {aircraft.LastSteerpoint}");
+      await NotifyAsync(InfoBarSeverity.Warning, fromShortcut, $"These waypoints don't fit: the {aircraft.Name} has {aircraft.SteerpointName}s up to {aircraft.LastSteerpoint}");
       return;
     }
 
     var targets = sequence.Steerpoints.Count(s => s is null);
     if (targets > 0 && firstTarget + targets - 1 > aircraft.LastTarget)
     {
-      ShowMessage(InfoBarSeverity.Warning, $"These targets don't fit: the {aircraft.Name} has targets up to {aircraft.LastTarget}");
+      await NotifyAsync(InfoBarSeverity.Warning, fromShortcut, $"These targets don't fit: the {aircraft.Name} has targets up to {aircraft.LastTarget}");
+      return;
+    }
+
+    if (again && fromShortcut)
+    {
+      await NotifyAsync(InfoBarSeverity.Warning, true, "These waypoints are already in this aircraft. Use the Transfer button to enter them again");
       return;
     }
 
@@ -311,13 +376,13 @@ public sealed partial class MainPage : Page
       _transferHistory.Record(state.AircraftId, transferId, pending.Waypoints, sequence.Steerpoints, sequence.WaypointEnteredAfter);
       _transferMessage = $"Entering {DescribeTransfer(aircraft, sequence, start)}, don't touch the cockpit controls";
       _transferStarted = false;
-      ShowMessage(InfoBarSeverity.Informational, _transferMessage);
+      await NotifyAsync(InfoBarSeverity.Informational, fromShortcut, _transferMessage);
       await App.DcsSender.SetCrosshairVisibleAsync(false);
       return;
     }
 
     _transferClickedUtc = default;
-    ShowMessage(InfoBarSeverity.Error, "DCS is not reachable");
+    await NotifyAsync(InfoBarSeverity.Error, fromShortcut, "DCS is not reachable");
   }
 
   private async Task<bool> ConfirmTransferAgainAsync(SupportedAircraft aircraft, int start)
@@ -331,7 +396,7 @@ public sealed partial class MainPage : Page
     return false;
   }
 
-  private async Task CancelTransferAsync()
+  private async Task CancelTransferAsync(bool fromShortcut = false)
   {
     _transferClickedUtc = DateTimeOffset.UtcNow;
     CancelTransferButton.IsEnabled = false;
@@ -342,7 +407,7 @@ public sealed partial class MainPage : Page
     }
 
     _transferMessage = null;
-    ShowMessage(InfoBarSeverity.Warning, "Transfer cancelled. Waypoints with a checkmark were entered");
+    await NotifyAsync(InfoBarSeverity.Warning, fromShortcut, "Transfer cancelled. Waypoints with a checkmark were entered");
   }
 
   public static string ThreatLabel(Waypoint waypoint) =>
@@ -405,17 +470,30 @@ public sealed partial class MainPage : Page
   private async void DeleteWaypointButton_Click(object sender, RoutedEventArgs e)
   {
     if (((FrameworkElement)sender).DataContext is not WaypointItem item) return;
+    await DeleteWaypointAsync(item);
+  }
+
+  private async Task DeleteWaypointAsync(WaypointItem item)
+  {
     _items.Remove(item);
     Refresh();
     await App.DcsSender.ShowRouteAsync(Waypoints);
   }
 
-  private async void ClearButton_Click(object sender, RoutedEventArgs e)
+  private async void ClearButton_Click(object sender, RoutedEventArgs e) => await ClearWaypointsAsync();
+
+  private async Task ClearWaypointsAsync()
   {
     _items.Clear();
     _nextWaypointNumber = 1;
     Refresh();
     await App.DcsSender.ShowRouteAsync(Waypoints);
+  }
+
+  private async Task NotifyAsync(InfoBarSeverity severity, bool inDcs, string message)
+  {
+    ShowMessage(severity, message);
+    if (inDcs) await App.DcsSender.ShowStatusAsync(message);
   }
 
   private void ShowMessage(InfoBarSeverity severity, string message)

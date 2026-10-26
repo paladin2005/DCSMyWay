@@ -10,8 +10,8 @@ namespace DCSMyWay;
 
 public sealed partial class SettingsWindow : Window
 {
-  private const int WindowWidth = 320;
-  private const int WindowHeight = 380;
+  private const int WindowWidth = 360;
+  private const int WindowHeight = 640;
 
   public SettingsWindow(Window owner)
   {
@@ -36,6 +36,7 @@ public sealed partial class SettingsWindow : Window
     AlwaysOnTopSwitch.IsOn = settings.AlwaysOnTop;
     DontTakeFocusSwitch.IsOn = settings.DontTakeFocus;
     ThemeButtons.SelectedIndex = (int)settings.Theme;
+    ShowShortcuts(settings);
     AlwaysOnTopSwitch.Toggled += async (_, _) =>
       await App.Settings.UpdateAsync(s => s with { AlwaysOnTop = AlwaysOnTopSwitch.IsOn });
     DontTakeFocusSwitch.Toggled += async (_, _) =>
@@ -53,7 +54,67 @@ public sealed partial class SettingsWindow : Window
     else Activate();
   }
 
-  private void OnSettingsChanged(object? sender, AppSettings settings) => ApplySettings(settings);
+  private Button[] ShortcutButtons =>
+    [ToggleCrosshairShortcutButton, AddWaypointShortcutButton, DeleteLastWaypointShortcutButton, TransferShortcutButton, ClearAllShortcutButton];
+
+  private void OnSettingsChanged(object? sender, AppSettings settings)
+  {
+    ApplySettings(settings);
+    ShowShortcuts(settings);
+  }
+
+  private void ShowShortcuts(AppSettings settings)
+  {
+    foreach (var button in ShortcutButtons) button.Content = settings.ShortcutFor(ActionOf(button))?.ToString() ?? "None";
+  }
+
+  private static ShortcutAction ActionOf(Button button) => Enum.Parse<ShortcutAction>((string)button.Tag);
+
+  private static string ShortcutName(ShortcutAction action) => action switch
+  {
+    ShortcutAction.ToggleCrosshair => "Show/hide crosshair",
+    ShortcutAction.AddWaypoint => "Add waypoint",
+    ShortcutAction.DeleteLastWaypoint => "Delete last waypoint",
+    ShortcutAction.Transfer => "Transfer or cancel",
+    _ => "Clear all",
+  };
+
+  private async void ShortcutButton_Click(object sender, RoutedEventArgs e)
+  {
+    var action = ActionOf((Button)sender);
+    Shortcut? captured = null;
+    ShortcutDialog.Title = ShortcutName(action);
+    ShortcutDialog.IsSecondaryButtonEnabled = App.Settings.Current.ShortcutFor(action) is not null;
+    ShowCapturedShortcut(action, null);
+    App.Shortcuts.Capture = shortcut =>
+    {
+      captured = shortcut;
+      ShowCapturedShortcut(action, shortcut);
+    };
+
+    ContentDialogResult result;
+    try
+    {
+      result = await ShortcutDialog.ShowAsync();
+    }
+    finally
+    {
+      App.Shortcuts.Capture = null;
+    }
+
+    if (result == ContentDialogResult.Primary && captured is not null) await App.Settings.UpdateAsync(s => s.WithShortcut(action, captured));
+    else if (result == ContentDialogResult.Secondary) await App.Settings.UpdateAsync(s => s.WithShortcut(action, null));
+  }
+
+  private void ShowCapturedShortcut(ShortcutAction action, Shortcut? shortcut)
+  {
+    var owner = shortcut is null ? null : App.Settings.Current.ActionFor(shortcut);
+    var conflict = owner is not null && owner != action;
+    CapturedShortcutText.Text = shortcut?.ToString() ?? "Waiting for keys";
+    ShortcutConflictBar.Message = conflict ? $"Already used by {ShortcutName(owner!.Value)}" : "";
+    ShortcutConflictBar.IsOpen = conflict;
+    ShortcutDialog.IsPrimaryButtonEnabled = shortcut is not null && !conflict;
+  }
 
   private async void RemoveFromDcsButton_Click(object sender, RoutedEventArgs e)
   {
