@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/paladin2005/DCSMyWay/releases"><img src="https://img.shields.io/github/v/release/paladin2005/DCSMyWay?include_prereleases&label=download" alt="Download"></a>
+  <a href="https://github.com/paladin2005/DCSMyWay/releases/latest/download/DCSMyWay.exe"><img src="https://img.shields.io/github/v/release/paladin2005/DCSMyWay?label=download%20DCSMyWay.exe" alt="Download DCSMyWay.exe"></a>
   <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011%20x64-blue" alt="Windows 10 | 11 x64">
   <img src="https://img.shields.io/badge/status-beta-orange" alt="Beta">
 </p>
@@ -69,7 +69,7 @@ Not supported yet: AV-8B, F-15E, M-2000C, OH-58D and the mods. If you fly one of
 
 ## Download and first run
 
-1. Download `DCSMyWay.exe` from the [Releases page](https://github.com/paladin2005/DCSMyWay/releases).
+1. Download [**DCSMyWay.exe**](https://github.com/paladin2005/DCSMyWay/releases/latest/download/DCSMyWay.exe) (or pick a version on the [Releases page](https://github.com/paladin2005/DCSMyWay/releases)).
 2. Put it anywhere you like (your desktop is fine) and double-click it.
    - The exe isn't signed yet, so Windows SmartScreen may say *"Windows protected your PC"*. Click **More info** and then **Run anyway**.
    - The first start takes a second longer while it unpacks itself.
