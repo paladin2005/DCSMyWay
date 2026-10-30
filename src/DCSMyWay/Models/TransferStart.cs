@@ -1,3 +1,3 @@
 namespace DCSMyWay.Models;
 
-public sealed record TransferStart(int Steerpoint, int Target, int? Seat);
+public sealed record TransferStart(int Steerpoint, int Target, int? Seat, bool NewPointsOnly = false);

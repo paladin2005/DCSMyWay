@@ -105,6 +105,31 @@ public class AH64Tests
   }
 
   [Fact]
+  public void NeverEditsAnExistingPointWhenTheTsdShowedNoCurrentWaypoint()
+  {
+    var segments = PointSteps(AH64.CreateTransfer(Waypoints.Take(2), 1, 0, newPointsOnly: true));
+
+    foreach (var (segment, index) in segments.Zip(["W01", "W02"]))
+    {
+      var decision = Assert.Single(segment, s => s.Options is not null && s.Options.Any(o => o.When.Values?.Contains(index) == true));
+      var add = Assert.Single(decision.Options!);
+      Assert.Equal(3024, add.Press!.Code);
+      Assert.StartsWith($"{index} already exists although the TSD shows no current waypoint", decision.Failure);
+    }
+    Assert.Equal(AH64.CreateTransfer(Waypoints.Take(2), 1, 0).Steps.Count, segments.Sum(s => s.Count) + 1);
+  }
+
+  [Fact]
+  public void StartsAtTheFirstWaypointOnlyAddingPointsWhenTheTsdShowsNoCurrentWaypoint()
+  {
+    var transfer = AH64.Aircraft.CreateTransfer(Waypoints.Take(1), new TransferStart(1, 1, 0, NewPointsOnly: true));
+
+    var decision = Assert.Single(transfer.Steps, s => s.Options is not null && s.Options.Any(o => o.When.Values?.Contains("W01") == true));
+    Assert.Single(decision.Options!);
+    Assert.Equal([1], transfer.Steerpoints);
+  }
+
+  [Fact]
   public void ChoosesTheWaypointTypeSoTheAttackPhaseDoesNotCreateTargets()
   {
     var segment = PointSteps(AH64.CreateTransfer(Waypoints.Take(1), 5, 0))[0];

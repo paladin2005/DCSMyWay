@@ -313,6 +313,7 @@ public sealed partial class MainPage : Page
     var waypoints = Waypoints;
     var pending = _transferHistory.Pending(state.AircraftId, waypoints);
     var again = pending.Waypoints.Count == 0;
+    var newPointsOnly = false;
     int start;
     if (startAtActive is { } atActive)
     {
@@ -323,6 +324,7 @@ public sealed partial class MainPage : Page
       }
 
       start = Math.Max(atActive ? active : active + 1, aircraft.FirstSteerpoint);
+      newPointsOnly = active < aircraft.FirstSteerpoint;
       if (again) pending = new PendingTransfer(waypoints, start);
       again = false;
     }
@@ -338,6 +340,7 @@ public sealed partial class MainPage : Page
     else if (state.ActiveSteerpoint is { } active)
     {
       start = Math.Max(active, aircraft.FirstSteerpoint);
+      newPointsOnly = active < aircraft.FirstSteerpoint;
     }
     else
     {
@@ -346,7 +349,7 @@ public sealed partial class MainPage : Page
     }
 
     var firstTarget = waypoints.Take(waypoints.Count - pending.Waypoints.Count).Count(w => w.IsTarget) + 1;
-    var sequence = aircraft.CreateTransfer(pending.Waypoints, new TransferStart(start, firstTarget, state.Seat));
+    var sequence = aircraft.CreateTransfer(pending.Waypoints, new TransferStart(start, firstTarget, state.Seat, newPointsOnly));
     if (sequence.Steerpoints.Max() > aircraft.LastSteerpoint)
     {
       await NotifyAsync(InfoBarSeverity.Warning, fromShortcut, $"These waypoints don't fit: the {aircraft.Name} has {aircraft.SteerpointName}s up to {aircraft.LastSteerpoint}");

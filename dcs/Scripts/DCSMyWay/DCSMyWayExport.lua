@@ -6,7 +6,7 @@ package.cpath = package.cpath .. ';' .. lfs.currentdir() .. '/LuaSocket/?.dll'
 local socket = require('socket')
 local JSON = loadfile(lfs.currentdir() .. '/Scripts/JSON.lua')()
 
-local VERSION = '0.12.0'
+local VERSION = '0.13.0'
 local HOST = '127.0.0.1'
 local APP_PORT = 42080
 local COMMAND_PORT = 42082
@@ -20,7 +20,7 @@ local STEERPOINT_SOURCES = {
   { model = '^F%-16', indicators = { 6 }, elements = { 'Selected Steerpoint', 'STEERPOINT NUMBER', 'INS_SelectedSteerpoint' }, display = 'DED' },
   { model = '^FA%-18', indicators = { 4, 2, 3 }, elements = { 'WYPT_Page_Number' } },
   { model = '^A%-10C', indicators = { 3 }, elements = { 'CurrSteerPointNumber' } },
-  { model = '^AH%-64', seatIndicators = { [0] = { 9, 7 }, [1] = { 13, 11 } }, elements = { 'NextWaypointStatusWindow_text_1' }, pattern = '^W(%d+)$' },
+  { model = '^AH%-64', seatIndicators = { [0] = { 9, 7 }, [1] = { 13, 11 } }, elements = { 'NextWaypointStatusWindow_text_1' }, pattern = '^W(%d+)$', noneWhen = { element = '^PB17_%d+$', value = 'NAV' } },
   { model = '^Ka%-50', indicators = { 5 }, elements = { 'txt_OIT_PPM' }, requires = 'txt_VIT' },
   { model = '^Mirage%-F1EE', argument = 1361, scale = 10 },
 }
@@ -123,6 +123,13 @@ local function readArgument(argument)
   return ok and type(value) == 'number' and value or nil
 end
 
+local function hasElement(elements, pattern, value)
+  for name, text in pairs(elements) do
+    if name:find(pattern) and text == value then return true end
+  end
+  return false
+end
+
 local function readSourceSteerpoint(source, logUnknown)
   if source.argument then
     local value = readArgument(source.argument)
@@ -135,10 +142,13 @@ local function readSourceSteerpoint(source, logUnknown)
     if text then
       local elements = parseIndication(text)
       local shown = not source.requires or elements[source.requires]
+      local named = false
       for _, name in ipairs(shown and source.elements or {}) do
         local current = elements[name] and tonumber(elements[name]:match(source.pattern or '%d+'))
         if current then return current end
+        if elements[name] and elements[name]:match('%S') then named = true end
       end
+      if source.noneWhen and not named and hasElement(elements, source.noneWhen.element, source.noneWhen.value) then return 0 end
       if logUnknown and source.display and text ~= '' and not unknownDisplayLogged then
         unknownDisplayLogged = true
         info(source.display .. ' page without steerpoint: ' .. text:gsub('\n', ' | '):sub(1, 400))

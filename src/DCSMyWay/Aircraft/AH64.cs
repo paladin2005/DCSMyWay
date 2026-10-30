@@ -48,7 +48,7 @@ public static class AH64
     1,
     LastWaypoint,
     "Show the TSD in NAV phase on one of your MPDs so DCSMyWay can read the current waypoint",
-    (waypoints, start) => CreateTransfer(waypoints, start.Steerpoint, start.Seat))
+    (waypoints, start) => CreateTransfer(waypoints, start.Steerpoint, start.Seat, start.NewPointsOnly))
   {
     SupportsTargets = true,
     SupportsThreats = true,
@@ -59,7 +59,7 @@ public static class AH64
 
   public static string PointIndex(int number) => string.Create(CultureInfo.InvariantCulture, $"W{number:00}");
 
-  public static TransferSequence CreateTransfer(IEnumerable<Waypoint> waypoints, int startWaypoint, int? seat)
+  public static TransferSequence CreateTransfer(IEnumerable<Waypoint> waypoints, int startWaypoint, int? seat, bool newPointsOnly = false)
   {
     var station = seat == CpgSeat ? Cpg : Pilot;
     var steps = new List<CockpitStep>();
@@ -76,7 +76,7 @@ public static class AH64
       }
       else
       {
-        EnterPoint(steps, station, waypoint, number);
+        EnterPoint(steps, station, waypoint, number, newPointsOnly);
         AddToRoute(steps, station, number);
         steerpoints.Add(number++);
       }
@@ -124,7 +124,7 @@ public static class AH64
     Failure = "The MPD did not open POINT > ADD",
   };
 
-  private static void EnterPoint(List<CockpitStep> steps, CrewStation station, Waypoint waypoint, int number)
+  private static void EnterPoint(List<CockpitStep> steps, CrewStation station, Waypoint waypoint, int number, bool newPointsOnly)
   {
     var index = PointIndex(number);
     var name = waypoint.Name;
@@ -138,11 +138,14 @@ public static class AH64
       Timeout = PageTimeout,
       Failure = "The MPD did not select the WP point type",
     });
+    var add = new StepOption(station.Mpd(AddIndexElement, index), station.MpdButton(L1));
     steps.Add(new(null)
     {
-      Options = [new(station.Mpd(AddIndexElement, index), station.MpdButton(L1)), new(station.Mpd("^PB24_%d+$", "IDENT>"), station.MpdButton(L2))],
+      Options = newPointsOnly ? [add] : [add, new(station.Mpd("^PB24_%d+$", "IDENT>"), station.MpdButton(L2))],
       Timeout = PageTimeout,
-      Failure = $"The MPD did not show the next free point while adding {index}",
+      Failure = newPointsOnly
+        ? $"{index} already exists although the TSD shows no current waypoint. Wait for the EGI to align, or put a waypoint in the route, so DCSMyWay doesn't overwrite it"
+        : $"The MPD did not show the next free point while adding {index}",
     });
     steps.Add(new(null)
     {
